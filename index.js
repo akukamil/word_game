@@ -125,55 +125,6 @@ class word_field_class extends PIXI.Container{
 		
 }
 
-class bonus_class extends PIXI.Container{
-	
-	constructor(){
-		
-		super();
-		
-		this.start_tm=0;
-		this.life_time=60000;
-		
-		this.bcg=new PIXI.Sprite(gres.apple_img.texture);
-		this.bcg.width=50;
-		this.bcg.height=50;
-		this.bcg.y=30;
-		
-		this.timer_bcg=new PIXI.Sprite(gres.timer_bcg.texture);
-		this.timer_bcg.x=-10;
-		this.timer_bcg.y=15;
-		
-		this.timer_bar=new PIXI.Graphics();
-		this.timer_bar.beginFill(0xffffff,0.6);
-		this.timer_bar.drawRect(0,0,46,6);
-		this.timer_bar.x=2;
-		this.timer_bar.y=this.timer_bcg.y+12;
-		
-		this.addChild(this.timer_bcg,this.timer_bar,this.bcg);
-		
-	}
-	
-	reset(){			
-		
-		
-		this.visible=true;	
-		this.timer_bar.scale.x=1;	
-
-		const items=[
-			{name:'apple',time:120000},
-			{name:'banana',time:70000},
-			{name:'cherry',time:50000}
-		]
-
-		const random_item=items[irnd(0,2)];
-		this.bcg.texture=gres[`${random_item.name}_img`].texture;
-		this.life_time=random_item.time;
-		
-	}
-	
-	
-}
-
 irnd = function (min,max) {	
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -735,28 +686,7 @@ game={
 		
 		if (init){		
 			some_process.game=function(){game.process_game(0)};
-			
-			const cur_time=Date.now();
-			this.start_time=cur_time;
-			objects.bonuses.forEach(b=>b.start_tm=cur_time)
 			return;
-		}
-		
-		
-		
-		
-		const cur_tm=Date.now();
-		const time_passed=cur_tm-this.start_time;
-		
-		for (let bonus of objects.bonuses){
-			
-			if (bonus.visible){	
-				
-				const scale=1-time_passed/bonus.life_time;
-				bonus.timer_bar.scale.x=scale
-				if (scale<=0)
-					bonus.visible=false;	
-			}		
 		}
 		
 	},
@@ -775,13 +705,6 @@ game={
 			return;
 		}
 		
-		const x_spd=3;
-		const ang_speed=x_spd/25;
-
-		this.dist_traveled+=x_spd;
-		objects.red_ball.rotation+=ang_speed;
-		objects.parallax_front1.x-=x_spd;
-		objects.parallax_front2.x-=x_spd;
 		
 		objects.parallax_bcg.x-=0.25;
 		objects.dynamic_cont.x-=x_spd;
@@ -855,8 +778,6 @@ game={
 	
 	prepare_bonuses(){		
 		
-		for (let bonus of objects.bonuses)	
-			bonus.reset();
 
 	},
 	
