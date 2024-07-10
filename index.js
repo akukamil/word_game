@@ -26,8 +26,9 @@ class letter_button_class extends PIXI.Container{
 		
 		super();
 		
+		this.letter='';
 		
-		this.shadow=new PIXI.Sprite(gres.letter_button_shadow.texture);
+		this.shadow=new PIXI.Sprite(gres.big_letter_shadow.texture);
 		this.shadow.width=90;
 		this.shadow.height=90;
 		this.shadow.anchor.set(0.5,0.5);
@@ -38,18 +39,25 @@ class letter_button_class extends PIXI.Container{
 		this.hl.anchor.set(0.5,0.5);
 		this.hl.visible=false;
 		
-		this.bcg=new PIXI.Sprite(gres.letter_button_bcg.texture);
+		this.bcg=new PIXI.Sprite(gres.big_letter_bcg.texture);
 		this.bcg.width=90;
 		this.bcg.height=90;
 		this.bcg.anchor.set(0.5,0.5);
 		
-		this.t_letter=new PIXI.BitmapText('А', {fontName: 'mfont',fontSize: 57,align: 'center'});
-		this.t_letter.anchor.set(0.5,0.5);
-		this.t_letter.tint=0x63472B;
+		this.letter_spr=new PIXI.Sprite(gres.letters_textures['А']);
+		this.letter_spr.anchor.set(0.5,0.5);
+		this.letter_spr.scale_xy=0.55;
 		
 		this.checked=0;
 		
-		this.addChild(this.shadow,this.hl,this.bcg, this.t_letter);
+		this.addChild(this.shadow,this.hl,this.bcg, this.letter_spr);
+	}
+	
+	set_letter_sprite(letter){		
+		
+		this.letter=letter;
+		this.letter_spr.texture=gres.letters_textures[letter];		
+		
 	}
 	
 }
@@ -59,36 +67,49 @@ class word_field_class extends PIXI.Container{
 	constructor(){
 		
 		super();
-		this.bcg=new PIXI.Sprite(gres.word_bcg3.texture);		
-		this.bcg.height=60;
-		this.bcg.width=140;
 		
 		this.word='';
 		this.opened=0;
 		this.word_len=0;
 		
 		//это буквы
-		this.letters=[]
+		this.holders=[];
+		this.letters=[];
 		for(let i=0;i<5;i++){
-			const letter=new PIXI.BitmapText('А', {fontName: 'mfont',fontSize: 40,align: 'center'});
-			letter.anchor.set(0.5,0.5);
-			letter.y=30;
-			letter.x=30+i*40;
+			
+			const holder=new PIXI.Sprite(gres.letter_holder_img.texture);	
+			holder.width=50;
+			holder.height=50;
+			holder.x=i*38;
+			this.holders.push(holder);	
+			
+			const letter=new letter_button_class();
+			letter.y=25;
+			letter.x=25+i*38;
+			letter.bcg.texture=gres.fly_button_bcg.texture;
+			letter.width=50;
+			letter.height=50;
 			letter.tint=0x63472B;
-			letter.visible=false;
+			letter.shadow.visible=false;
+			letter.hl.visible=false;
+			letter.visible=true;
+				
 			this.letters.push(letter);			
 		}
 		
-		this.addChild(this.bcg,...this.letters);		
+		this.addChild(...this.holders,...this.letters);		
 	}
 	
 	open_word(){
 		
 		const word_len=this.word.length;
-		for (let l=0;l<word_len;l++)
-			this.letters[l].visible=true;
-		this.opened=1;
-		sound.play('opened');
+		for (let l=0;l<word_len;l++){
+			this.letters[l].visible=true;			
+			this.letters[l].set_letter_sprite(this.word[l]);
+			anim2.add(this.letters[l].hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
+		}
+
+		
 		
 	}
 	
@@ -98,27 +119,15 @@ class word_field_class extends PIXI.Container{
 		this.opened=0;
 		
 		const word_len=word.length;
-		this.word_len=word_len;
-		
-		if (word_len===3){
-			this.bcg.width=140;
-			this.bcg.texture=gres.word_bcg3.texture			
-		}
+		this.word_len=word_len;		
 
-		if (word_len===4){
-			this.bcg.width=180;
-			this.bcg.texture=gres.word_bcg4.texture			
-		}
-
-		if (word_len===5){
-			this.bcg.width=220;
-			this.bcg.texture=gres.word_bcg5.texture			
-		}
-	
+		this.holders.forEach(h=>h.visible=false)
 		this.letters.forEach(l=>l.visible=false)
+		
 		for (let l=0;l<word_len;l++){
+			this.holders[l].visible=true;
 			this.letters[l].visible=false;
-			this.letters[l].text=word[l];
+			this.letters[l].set_letter_sprite(word[l]);
 		}
 		
 	}
@@ -142,7 +151,7 @@ anim2={
 		
 	slot: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
 	
-	any_on : function() {
+	any_on() {
 		
 		for (let s of this.slot)
 			if (s !== null&&s.block)
@@ -154,11 +163,11 @@ anim2={
 		return this.add(this.empty_spr,{x:[0,1]}, false, seconds,'linear');		
 	},
 	
-	linear: function(x) {
+	linear(x) {
 		return x
 	},
 	
-	kill_anim: function(obj) {
+	kill_anim(obj) {
 		
 		for (var i=0;i<this.slot.length;i++)
 			if (this.slot[i]!==null)
@@ -166,11 +175,11 @@ anim2={
 					this.slot[i]=null;		
 	},
 	
-	easeOutBack: function(x) {
+	easeOutBack(x) {
 		return 1 + this.c3 * Math.pow(x - 1, 3) + this.c1 * Math.pow(x - 1, 2);
 	},
 	
-	easeOutElastic: function(x) {
+	easeOutElastic(x) {
 		return x === 0
 			? 0
 			: x === 1
@@ -178,23 +187,23 @@ anim2={
 			: Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * this.c4) + 1;
 	},
 	
-	easeOutSine: function(x) {
+	easeOutSine(x) {
 		return Math.sin( x * Math.PI * 0.5);
 	},
 	
-	easeOutCubic: function(x) {
+	easeOutCubic(x) {
 		return 1 - Math.pow(1 - x, 3);
 	},
 	
-	easeInBack: function(x) {
+	easeInBack(x) {
 		return this.c3 * x * x * x - this.c1 * x * x;
 	},
 	
-	easeInQuad: function(x) {
+	easeInQuad(x) {
 		return x * x;
 	},
 	
-	easeOutBounce: function(x) {
+	easeOutBounce(x) {
 		const n1 = 7.5625;
 		const d1 = 2.75;
 
@@ -209,27 +218,27 @@ anim2={
 		}
 	},
 	
-	easeInCubic: function(x) {
+	easeInCubic(x) {
 		return x * x * x;
 	},
 	
-	ease2back : function(x) {
-		return Math.sin(x*Math.PI*2);
+	ease2back(x) {
+		return Math.sin(x*Math.PI);
 	},
 	
-	easeInOutCubic: function(x) {
+	easeInOutCubic(x) {
 		
 		return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 	},
 	
-	shake : function(x) {
+	shake(x) {
 		
-		return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+		return Math.sin(x*2 * Math.PI);	
 		
 		
 	},	
 	
-	add : function(obj,params,vis_on_end,time,func,block) {
+	add (obj,params,vis_on_end,time,func,block) {
 				
 		//если уже идет анимация данного спрайта то отменяем ее
 		anim2.kill_anim(obj);
@@ -252,7 +261,7 @@ anim2={
 				}
 				
 				//для возвратных функцие конечное значение равно начальному
-				if (func === 'ease2back')
+				if (func === 'ease2back'||func==='shake')
 					for (let key in params)
 						params[key][1]=params[key][0];					
 					
@@ -295,7 +304,7 @@ anim2={
 
 	},	
 	
-	process: function () {
+	process () {
 		
 		for (var i = 0; i < this.slot.length; i++)
 		{
@@ -390,6 +399,268 @@ music={
 	
 }
 
+auth2 = {
+		
+	load_script(src) {
+	  return new Promise((resolve, reject) => {
+		const script = document.createElement('script')
+		script.type = 'text/javascript'
+		script.onload = resolve
+		script.onerror = reject
+		script.src = src
+		document.head.appendChild(script)
+	  })
+	},
+			
+	get_random_char() {		
+		
+		const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+		return chars[irnd(0,chars.length-1)];
+		
+	},
+	
+	get_random_uid_for_local(prefix) {
+		
+		let uid = prefix;
+		for ( let c = 0 ; c < 12 ; c++ )
+			uid += this.get_random_char();
+		
+		//сохраняем этот uid в локальном хранилище
+		try {
+			localStorage.setItem('poker_uid', uid);
+		} catch (e) {alert(e)}
+					
+		return uid;
+		
+	},
+	
+	get_random_name(uid) {
+		
+		const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+		const rnd_names = ['Gamma','Chime','Dron','Perl','Onyx','Asti','Wolf','Roll','Lime','Cosy','Hot','Kent','Pony','Baker','Super','ZigZag','Magik','Alpha','Beta','Foxy','Fazer','King','Kid','Rock'];
+		
+		if (uid !== undefined) {
+			
+			let e_num1 = chars.indexOf(uid[3]) + chars.indexOf(uid[4]) + chars.indexOf(uid[5]) + chars.indexOf(uid[6]);
+			e_num1 = Math.abs(e_num1) % (rnd_names.length - 1);				
+			let name_postfix = chars.indexOf(uid[7]).toString() + chars.indexOf(uid[8]).toString() + chars.indexOf(uid[9]).toString() ;	
+			return rnd_names[e_num1] + name_postfix.substring(0, 3);					
+			
+		} else {
+
+			let rnd_num = irnd(0, rnd_names.length - 1);
+			let rand_uid = irnd(0, 999999)+ 100;
+			let name_postfix = rand_uid.toString().substring(0, 3);
+			let name =	rnd_names[rnd_num] + name_postfix;				
+			return name;
+		}	
+	},	
+	
+	async get_country_code() {
+
+		let country_code = ''
+		try {
+			let resp1 = await fetch("https://ipinfo.io/json?token=a3455d3185ba47");
+			let resp2 = await resp1.json();			
+			country_code = resp2.country || '';			
+		} catch(e){}
+
+		return country_code;
+		
+	},
+	
+	async get_country_code2() {
+
+		let country_code = ''
+		try {
+			let resp1 = await fetch("https://api.ipgeolocation.io/ipgeo?apiKey=1efc1ba695434f2ab24129a98a72a1d4");
+			let resp2 = await resp1.json();			
+			country_code = resp2.country_code2 || '';			
+		} catch(e){}
+
+		return country_code;
+		
+	},
+	
+	search_in_local_storage() {
+		
+		//ищем в локальном хранилище
+		let local_uid = null;
+		
+		try {
+			local_uid = localStorage.getItem('poker_uid');
+		} catch (e) {alert(e)}
+				
+		if (local_uid !== null) return local_uid;
+		
+		return undefined;	
+		
+	},
+	
+	
+	async search_in_crazygames(){
+		if(!window.CrazyGames.SDK)
+			return {};
+		
+		let token='';
+		try{
+			token = await window.CrazyGames.SDK.user.getUserToken();
+		}catch(e){
+			return {};
+		}
+		const user = window.jwt_decode(token);
+		return user || {};
+	},
+	
+	
+	async init() {	
+				
+		if (game_platform === 'GM') {
+			
+			try {await this.load_script('https://api.gamemonetize.com/sdk.js')} catch (e) {alert(e)};
+			
+			window.SDK_OPTIONS = {
+				gameId: "itlfj6x5pluki04lefb9z3n73xedj19x",
+				onEvent: function (a) {
+					switch (a.name) {
+						case "SDK_GAME_PAUSE":
+						   // pause game logic / mute audio
+						   break;
+						case "SDK_GAME_START":
+						   // advertisement done, resume game logic and unmute audio
+						   break;
+						case "SDK_READY":
+						   // when sdk is ready
+						   break;
+					}
+				}
+			
+			}
+			
+			my_data.uid = this.search_in_local_storage() || this.get_random_uid_for_local('GM_');
+			my_data.name = this.get_random_name(my_data.uid);
+			my_data.orig_pic_url = 'mavatar'+my_data.uid;			
+			
+		}
+				
+		if (game_platform === 'YANDEX') {			
+		
+			try {await this.load_script('https://yandex.ru/games/sdk/v2')} catch (e) {alert(e)};										
+					
+			let _player;
+			
+			try {
+				window.ysdk = await YaGames.init({});			
+				_player = await window.ysdk.getPlayer();
+			} catch (e) { alert(e)};
+			
+			my_data.uid = _player.getUniqueID().replace(/[\/+=]/g, '');
+			my_data.name = _player.getName();
+			my_data.orig_pic_url = _player.getPhoto('medium');
+			
+			if (my_data.orig_pic_url === 'https://games-sdk.yandex.ru/games/api/sdk/v1/player/avatar/0/islands-retina-medium')
+				my_data.orig_pic_url = 'mavatar'+my_data.uid;	
+			
+			if (my_data.name === ''){				
+				my_data.name = this.get_random_name(my_data.uid);				
+			}else{
+				my_data.yndx_auth=1;
+			}
+
+
+			
+			return;
+		}
+		
+		if (game_platform === 'VK') {
+			
+			try {await this.load_script('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js')} catch (e) {alert(e)};
+			
+			let _player;
+			
+			try {
+				await vkBridge.send('VKWebAppInit');
+				_player = await vkBridge.send('VKWebAppGetUserInfo');				
+			} catch (e) {alert(e)};
+
+			
+			my_data.name 	= _player.first_name + ' ' + _player.last_name;
+			my_data.uid 	= "vk"+_player.id;
+			my_data.orig_pic_url = _player.photo_100;
+			
+			return;
+			
+		}
+		
+		if (game_platform === 'GOOGLE_PLAY') {	
+
+			my_data.uid = this.search_in_local_storage() || this.get_random_uid_for_local('GP_');
+			my_data.name = this.get_random_name(my_data.uid);
+			my_data.orig_pic_url = 'mavatar'+my_data.uid;		
+			return;
+		}
+		
+		if (game_platform === 'RUSTORE') {	
+
+			my_data.uid = this.search_in_local_storage() || this.get_random_uid_for_local('RS_');
+			my_data.name = this.get_random_name(my_data.uid);
+			my_data.orig_pic_url = 'mavatar'+my_data.uid;		
+			return;
+		}
+		
+		if (game_platform === 'DEBUG') {		
+
+			my_data.name = my_data.uid = 'debug' + prompt('Отладка. Введите ID', 100);
+			my_data.orig_pic_url = 'mavatar'+my_data.uid;			
+			return;
+		}
+		
+		if (game_platform === 'CRAZYGAMES') {			
+			
+			try {await this.load_script('https://sdk.crazygames.com/crazygames-sdk-v2.js')} catch (e) {alert(e)};	
+			try {await this.load_script('https://akukamil.github.io/quoridor/jwt-decode.js')} catch (e) {alert(e)};		
+			const cg_user_data=await this.search_in_crazygames();			
+			my_data.uid = cg_user_data.userId || this.search_in_local_storage() || this.get_random_uid_for_local('CG_');
+			my_data.name = cg_user_data.username || this.get_random_name(my_data.uid);
+			my_data.orig_pic_url = cg_user_data.profilePictureUrl || ('mavatar'+my_data.uid);	
+					
+
+			//перезапускаем если авторизация прошла
+			
+			window.CrazyGames.SDK.user.addAuthListener(function(user){	
+				if (user?.id&&user.id!==my_data.uid){
+					console.log('user changed',user);
+					location.reload();	
+				}	
+			});
+
+					
+			return;
+		}
+		
+		
+		if (game_platform === 'UNKNOWN') {
+			
+			//если не нашли платформу
+			alert('Неизвестная платформа. Кто Вы?')
+			my_data.uid = this.search_in_local_storage() || this.get_random_uid_for_local('LS_');
+			my_data.name = this.get_random_name(my_data.uid);
+			my_data.orig_pic_url = 'mavatar'+my_data.uid;		
+		}
+		
+	
+	},
+	
+	get_country_from_name(name){
+		
+		const have_country_code=/\(.{2}\)/.test(name);
+		if(have_country_code)
+			return name.slice(-3, -1);
+		return '';
+		
+	}
+}
+
 game={
 
 	score:0,
@@ -399,16 +670,59 @@ game={
 	letters_num:5,
 	word_creation_started:0,
 	letters_seq:[],
-	dist_traveled:0,
-	half_traveled_flag:0,
 	start_time:0,
 	cur_block:0,
 	on:0,
-
-	activate(level_id=0) {			
+	cur_cont:0,
+	next_cont:0,
+	info_ok_resolver:0,
+	level_complete_resolver:0,
+		
+	async run_world(){		
+		
+		this.cur_level=0;
+		
+		//вытаксиваем уровень
+		objects.game_cont.visible=false;
+		objects.info_board_cont.x=M_WIDTH;
+		anim2.add(objects.info_board_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
+		objects.level_info.text=`Уровень ${this.cur_level+1}/${game_data.length}`;
+		objects.t_level.text=objects.level_info.text;
+				
+		for (let i=0;i<game_data.length;i++){
+							
+			//ждем нажатия кнопки
+			await new Promise(res=>{game.info_ok_resolver=res})
 			
-		//this.cur_level=level_id;
-		//some_process.game=this.process.bind(game);
+			//располагаем слова следующего уровня
+			this.prepare_words();
+			
+			//***********двигаем и показываем игру
+			//anim2.add(objects.parallax_bcg,{x:[objects.parallax_bcg.x,objects.parallax_bcg.x-10]}, true, 0.5,'linear');	
+			anim2.add(objects.info_board_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
+			await anim2.add(objects.game_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
+			
+			//показываем буквы
+			this.show_letters();
+			
+			//ждем завершения уровня
+			await new Promise(res=>{game.level_complete_resolver=res})
+			
+			//убираем буквы
+			this.drop_letters();
+			this.cur_level++;			
+			
+			//*************двигаем и показываем объявление
+			objects.level_info.text=`Уровень ${this.cur_level+1}/${game_data.length}`;
+			objects.t_level.text=objects.level_info.text;
+			anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
+			await anim2.add(objects.info_board_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');				
+						
+		}	
+		
+	},
+
+	show_letters() {			
 		
 		//скрвываем сначала все буквы
 		objects.letter_buttons.forEach(l=>l.visible=false);
@@ -418,19 +732,18 @@ game={
 		const start_angle=Math.PI*2*Math.random();
 		const letters_to_play=game_data[this.cur_level].letters.sort(()=>0.5-Math.random());
 		for (let i=0;i<this.letters_num;i++){
-			const letter=objects.letter_buttons[i];
-			letter.visible=true;
-			letter.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*95;
+			const letter_cont=objects.letter_buttons[i];
+			letter_cont.visible=true;
+			letter_cont.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*95;
 			const tar_y=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*95;
-			letter.t_letter.text=letters_to_play[i];
-			letter.angle=irnd(-10,10);
+						
+			letter_cont.set_letter_sprite(letters_to_play[i]);
+			letter_cont.angle=irnd(-10,10);
 			
-			anim2.add(letter,{y:[800,tar_y]}, true, 0.5,'easeOutBack');	
+			anim2.add(letter_cont,{y:[800,tar_y]}, true, 0.5,'easeOutBack');	
 		}
 		
-		//поворачиваем ред бола вертикально
-		const cur_angle=objects.red_ball.rotation%(2*Math.PI);
-		anim2.add(objects.red_ball,{rotation:[cur_angle,0]}, true, 0.2,'linear');
+
 			
 	},
 		
@@ -441,7 +754,7 @@ game={
 		
 		const words_to_guess=game_data[this.cur_level].words;
 		const num_of_letters=words_to_guess.reduce((acc, curr) => acc + curr.length,0);
-		const x_len=Math.round(num_of_letters/2.8);
+		const x_len=Math.round(num_of_letters/2.9);
 		
 		let end_line_x=0;
 		let end_line_y=0;
@@ -493,19 +806,10 @@ game={
 		objects.words_cont.scale_xy=1;
 		
 		//масштабируем чтобы вписывалось в экран
-		const tar_scale=Math.min(440/objects.words_cont.width,270/objects.words_cont.height)
+		const tar_scale=Math.min(360/objects.words_cont.width,240/objects.words_cont.height)
 		objects.words_cont.scale_xy=tar_scale;
 		objects.words_cont.x=M_WIDTH*0.5-objects.words_cont.width*0.5;
-		objects.words_cont.y=180-objects.words_cont.height*0.5;
-	},
-		
-	async goto_next_level(){
-		
-		this.drop_letters();			
-		this.cur_level++;		
-		this.move_next(1);
-
-		
+		objects.words_cont.y=215-objects.words_cont.height*0.5;
 	},
 	
 	drop_letters(){
@@ -519,12 +823,15 @@ game={
 	
 	area_move(e){
 		
+		const ID = Math.random();
 		if (!this.word_creation_started) return;
 		
 		//координаты указателя
 		const mx = e.data.global.x/app.stage.scale.x;
 		const my = e.data.global.y/app.stage.scale.y;
 		const r=objects.letter_buttons[0].bcg.width*0.5;
+		
+		//проверяем выход за пределы зоны------
 		const cx=objects.letters_area_bcg.x;
 		const cy=objects.letters_area_bcg.y;
 		const dx=mx-cx;
@@ -535,28 +842,39 @@ game={
 		
 		//ищем пересекающиеся и не выбраные еще буквы
 		for (let i=0;i<this.letters_num;i++){
-			const letter=objects.letter_buttons[i];
-			if (!letter.checked){
+			const letter_cont=objects.letter_buttons[i];
+			if (!letter_cont.checked){
 				
-				const lx=letter.x;
-				const ly=letter.y;
+				const lx=letter_cont.x;
+				const ly=letter_cont.y;
 
 				const dx=mx-lx;
 				const dy=my-ly;
 				const d=Math.sqrt(dx*dx+dy*dy);
-				
-				if (d<r){
-					letter.checked=true;
-					letter.hl.visible=true;
-					this.letters_seq.push(letter);
-					this.add_letter(letter.t_letter.text);
+				if (d<r){					
+									
+					letter_cont.checked=true;
+					letter_cont.hl.visible=true;
+					anim2.add(letter_cont,{scale_xy:[1,1.1]}, true, 0.15,'ease2back');	
+					sound.play('button0');			
+					
+					if(!this.word_creation_started){						
+						this.word_creation_started=1;
+						return;
+					}
+
+					this.letters_seq.push(letter_cont);
+					this.add_letter_and_check(letter_cont.letter);
+
 				}				
 			}			
 		}
+		
+		
 			
-		//рисуем линию коннектор		
+		//рисуем линию коннектор			
 		objects.letter_connect_graph.clear();
-		if (!this.word_creation_started) return;
+		if (!this.word_creation_started||!this.letters_seq.length) return;
 		objects.letter_connect_graph.lineStyle(6, 0xffffff)		
 		objects.letter_connect_graph.moveTo(this.letters_seq[0].x, this.letters_seq[0].y);		
 		for (let i=1;i<this.letters_seq.length;i++)
@@ -567,33 +885,10 @@ game={
 	
 	area_down(e){
 		
-		//координаты указателя
-		const mx = e.data.global.x/app.stage.scale.x;
-		const my = e.data.global.y/app.stage.scale.y;
-		const r=objects.letter_buttons[0].bcg.width*0.5;
-		
-		//ищем пересекающиеся и не выбраные еще буквы
-		for (let i=0;i<this.letters_num;i++){
-			const letter=objects.letter_buttons[i];
-			if (!letter.checked){
-				
-				const lx=letter.x;
-				const ly=letter.y;
-
-				const dx=mx-lx;
-				const dy=my-ly;
-				const d=Math.sqrt(dx*dx+dy*dy);
-				
-				if (d<r){
-					letter.checked=true;
-					letter.hl.visible=true;
-					this.letters_seq.push(letter);	
-					this.word_creation_started=1;
-					this.add_letter(letter.t_letter.text);
-					return;
-				}				
-			}			
-		}		
+		this.word_creation_started=1;
+		this.area_move(e);
+		return;		
+	
 	},
 	
 	area_up(){
@@ -604,40 +899,9 @@ game={
 		objects.letter_buttons.forEach(l=>{l.checked=0;l.hl.visible=false});
 		this.letters_seq=[];
 		objects.letter_connect_graph.clear();
-		
+		console.log('AREA_UP');	
 	},
 		
-	click(e){
-		
-		//координаты указателя
-		const mx = objects.sack_back.x+this.sack_dir*5;
-		const my = 150;
-		
-		//objects.sack_back.x=mx;
-		//objects.sack_front.x=mx;
-		
-		
-		const num_of_ball=d_bodies.length;
-		
-		for (let i =0;i<num_of_ball;i++){
-			const ball_body=d_bodies[i];
-			if (!ball_body.isActive()){
-				ball_body.setActive(true);
-				ball_body.setPosition(planck.Vec2(mx, my));
-				ball_body.setLinearVelocity(planck.Vec2(0,0));
-				ball_body.setAngularVelocity(0);
-				objects.balls[i].x=mx;
-				objects.balls[i].y=my;
-				objects.balls[i].visible=true;
-				objects.balls[i].texture=gres['ball'+irnd(0,6)].texture;
-				sound.play('shell');
-				return;
-			}
-			
-		}			
-		
-	},
-	
 	pause_down(){
 		
 		if (anim2.any_on()||objects.pause_cont.visible||!this.on) return;		
@@ -663,123 +927,16 @@ game={
 			const letter=objects.letter_buttons[index];
 			const tx=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*90;
 			const ty=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*90;
-			anim2.add(letter,{x:[letter.x,tx],y:[letter.y,ty]}, true, 0.25,'easeInOutCubic');
+			const cur_ang=letter.angle;
+			const tar_ang=irnd(-10,10);
+			anim2.add(letter,{x:[letter.x,tx],y:[letter.y,ty],angle:[cur_ang,tar_ang]}, true, 0.25,'easeInOutCubic');
 		}	
 		
 	},
-	
-	resume_down(){
-		
-		if (anim2.any_on()) return;
-		
-		sound.play('click');
-		this.on=1;
-		some_process.game=game.process.bind(game);
-		
-		//
-		objects.lock_screen.visible=false;
-		anim2.add(objects.pause_cont,{y:[objects.pause_cont.y,800]}, false, 0.3,'linear');
-		
-	},
-		
-	process_game(init){
-		
-		if (init){		
-			some_process.game=function(){game.process_game(0)};
-			return;
-		}
-		
-	},
-	
-	process_init(init){
-		
-		if (init){		
-			this.dist_traveled=0;
-			this.prepare_words();
-			some_process.game=function(){game.process_init(0)};			
-			objects.dynamic_cont.x=M_WIDTH;
-			objects.parallax_front1.x=0;
-			objects.parallax_front2.x=M_WIDTH;
-			this.cur_block=0;
-			objects.block.text=`${this.cur_block+1}/${game_data.length}`;
-			return;
-		}
-		
-		
-		objects.parallax_bcg.x-=0.25;
-		objects.dynamic_cont.x-=x_spd;
-		
-		//если проехали сколько надо то начинаем сначала
-		if (this.dist_traveled>=440){
-			this.process_game(1);		
-			this.activate();
-		}	
-		
-	},
-	
-	move_next(init){
-		
-		if (init){		
-			this.dist_traveled=0;
-			this.half_traveled_flag=0;
-			some_process.game=function(){game.move_next(0)};
-			return;
-		}
-		
-		const x_spd=3;
-		const ang_speed=x_spd/25;
-		
-		this.dist_traveled+=x_spd;
-		objects.red_ball.rotation+=ang_speed;
-		objects.parallax_front1.x-=x_spd;
-		objects.parallax_front2.x-=x_spd;
-		
-		objects.parallax_bcg.x-=0.25;
-		objects.dynamic_cont.x-=x_spd;
-		
-		if (objects.parallax_front1.x<-440)
-			objects.parallax_front1.x=objects.parallax_front2.width+objects.parallax_front2.x;
-		
-		if (objects.parallax_front2.x<-440)
-			objects.parallax_front2.x=objects.parallax_front1.width+objects.parallax_front1.x;
-
-				
-		//если проехали сколько надо то начинаем сначала
-		if (this.dist_traveled>=880){
-			this.process_game(1);		
-			this.activate();
-		}	
-		
-		//съедаем фрукты
-		for (let bonus of objects.bonuses){
 			
-			if (bonus.visible){	
-				
-				const world_x=objects.dynamic_cont.x+bonus.sx+25;
-				if (world_x<70)
-					bonus.visible=false;	
-			}		
-		}
-		
-		
-		//событие когда полностью экран скрылся
-		if (objects.dynamic_cont.x<-440){			
-			objects.dynamic_cont.x=440;					
-			if (!this.half_traveled_flag){
-				this.half_traveled_flag=1;	
-				this.prepare_words();
-				this.prepare_bonuses();
-				
-				this.cur_block++;
-				objects.block.text=`${this.cur_block+1}/${game_data.length}`;
-			}			
-		}		
-	},
-	
-	prepare_bonuses(){		
-		
-
-	},
+	next_button_down(){		
+		this.info_ok_resolver(1);		
+	},	
 	
 	exit_down(){
 		
@@ -811,48 +968,85 @@ game={
 
 	},
 	
-	add_letter(letter){
+	add_letter_and_check(letter){
 		
 		objects.typing_word.text+=letter;
 		objects.typing_word_bcg.width=objects.typing_word.width+40;
 		objects.typing_word_bcg.pivot.x=objects.typing_word_bcg.width*0.5;
 		objects.typing_word_bcg.visible=true;
 		
-		//проверяем
-		for(let word of objects.words){			
-			if (word.visible&&!word.opened){				
-				if (word.word===objects.typing_word.text){
-					word.open_word();
-					this.open_word_anim();
-					this.area_up();
-					if (this.all_words_opened()){
-						this.goto_next_level();
-						console.log('complete');
-					}
-					return;
-				}				
-			}			
+		//проверяем есть ли совпадения
+		const matched_word=objects.words.find(function(w){return w.word===objects.typing_word.text&&w.visible});
+		
+		//проверяем открытое слово
+		if (matched_word?.opened){
+			//sound.play('word_opened');
+			anim2.add(matched_word,{x:[matched_word.x,matched_word.x+5]}, true, 0.15,'shake');
+			return;
 		}
+		
+		
+		if (!matched_word) return;
+		
+		matched_word.opened=1;
+		this.open_word_anim(matched_word);		
+		this.area_up();
 
-
+		
 	},
 	
-	open_word_anim(){
-		
+	async open_word_anim(word_cont){
+				
+		//буквы летят на места
 		for (let i=0;i<this.letters_seq.length;i++){
 			
-			const letter=this.letters_seq[i];
+			const letter_cont=this.letters_seq[i];
 			const fly_letter=objects.fly_letters[i];
 			
-			fly_letter.x=letter.x;
-			fly_letter.y=letter.y;
-			fly_letter.angle=letter.angle;
-			fly_letter.t_letter.text=letter.t_letter.text;
 			
+			const sx=letter_cont.x;
+			const sy=letter_cont.y;
+			const s_angle=letter_cont.angle;
+			fly_letter.set_letter_sprite(letter_cont.letter);
 			
-			anim2.add(fly_letter,{y:[fly_letter.y,200],alpha:[1,0],angle:[fly_letter.angle,0]}, false, 1,'linear');	
+			const cur_scale=letter_cont.scale_xy;
+			const g_holder_width=word_cont.holders[i].width*objects.words_cont.scale_xy;
+			
+			const tar_x=g_holder_width*0.5+objects.words_cont.x+word_cont.x*objects.words_cont.scale_x+word_cont.holders[i].x*objects.words_cont.scale_x;
+			const tar_y=g_holder_width*0.5+objects.words_cont.y+word_cont.y*objects.words_cont.scale_y+word_cont.holders[i].y*objects.words_cont.scale_y;
+			const tar_scale=objects.words_cont.scale_xy*word_cont.holders[i].scale_xy;
+			
+			anim2.add(fly_letter,{x:[sx,tar_x],y:[sy,tar_y],scale_xy:[cur_scale,tar_scale],alpha:[0.5,1],angle:[s_angle,0]}, true, 0.5,'linear');	
 			
 		}
+		
+		sound.play('word_open0');
+		await anim2.wait(0.5);
+		
+		sound.play('word_open');
+		//убираем летящие буквы
+		objects.fly_letters.forEach(f=>f.visible=false);
+		
+		//открываем настоящие буквы
+		word_cont.open_word();					
+				
+		//дополнительная анимация
+		for (let i=0;i<word_cont.word.length;i++){
+			const fly_letter=objects.fly_letters[i];
+			const flash=objects.flashes.find(f=>f.visible===false);
+			flash.x=fly_letter.x;
+			flash.y=fly_letter.y;
+			flash.angle=irnd(0,360);
+			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear');				
+		}		
+
+			
+		//если все открыто, то завершаем уровень
+		if (this.all_words_opened()){
+			await anim2.add(objects.board_hl,{alpha:[0,1]}, false, 3,'ease2back');	
+			this.level_complete_resolver();			
+		}
+
 		
 	},
 	
@@ -984,39 +1178,172 @@ main_menu={
 
 }
 
-async function load_resources() {
-
-
-	//отображаем шкалу загрузки
-	document.body.innerHTML = '<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items: center;justify-content: center;background-color: rgba(30,30,130,1);flex-direction: column;}#progressFrame {background: rgb(30, 30, 100);border:1px solid rgb(130, 130, 200);justify-content: flex-start;border-radius: 5px;align-items: center;position: relative;padding: 0 5px;display: none;height: 50px;width: 70%;}#progressBar {border-radius: 5px;background: rgb(80, 80, 180);height: 70%;width: 0%;}</style><div id="progressFrame" style="display: flex;"> <div id="progressBar"></div></div>';
-
+main_loader={
 	
-	
-	git_src=''	
-	game_res=new PIXI.Loader();
-	game_res.add("m2_font", git_src+"fonts/multiround/font.fnt");
+	async load1(){
 		
-    //добавляем из листа загрузки
-    for (var i = 0; i < load_list.length; i++)
-        if (load_list[i].class === "sprite" || load_list[i].class === "image" )
-            game_res.add(load_list[i].name, git_src+'res/ENG/'+load_list[i].name+"."+load_list[i].image_format);		
+		
+		//добавляем фон отдельно
+		game_res.add('loader_bcg',git_src+'res/common/loader_bcg_img.jpg');
+		game_res.add('game_title',git_src+'res/common/game_title_img.png');	
+		game_res.add('progress_bcg',git_src+'res/common/progress_bcg_img.png');
+		game_res.add('progress_slider',git_src+'res/common/progress_slider_img.png');
+				
+		await new Promise(res=>game_res.load(res))
+		
+		//элементы загрузки
+		objects.loader_cont=new PIXI.Container();
+				
+		objects.bcg=new PIXI.Sprite(gres.loader_bcg.texture);
+		objects.bcg.width=460;
+		objects.bcg.height=760;
+		objects.bcg.x=-10;
+		objects.bcg.y=-10;
+		
+		objects.loader_title=new PIXI.Sprite(gres.game_title.texture);
+		objects.loader_title.x=200;
+		objects.loader_title.y=220;
+		objects.loader_title.anchor.set(0.5,0.5);
+		objects.loader_title.width=362;
+		objects.loader_title.height=195;
+		
+		objects.progress_bcg=new PIXI.Sprite(gres.progress_bcg.texture);
+		objects.progress_bcg.x=20;
+		objects.progress_bcg.y=600;
+		objects.progress_bcg.width=360;
+		objects.progress_bcg.height=50;
+		
+		objects.progress_slider=new PIXI.NineSlicePlane(gres.progress_slider.texture,20,20,20,20);
+		objects.progress_slider.x=30;
+		objects.progress_slider.y=610;
+		objects.progress_slider.width=10;
+		objects.progress_slider.height=30;
+		
+		objects.loader_cont.addChild(objects.loader_title,objects.progress_bcg,objects.progress_slider);
+		app.stage.addChild(objects.bcg,objects.loader_cont);
+		
+		
+	},
+	
+	async load2(){
+		
+		//подпапка с ресурсами
+		const lang_pack = ['RUS','ENG'][LANG];	
+					
+		game_res.add("m2_font", git_src+"fonts/Bahnschrift/font.fnt");
+		
+		game_res.add('word_open',git_src+'sounds/word_open.mp3');
+		game_res.add('word_open0',git_src+'sounds/word_open0.mp3');
+		game_res.add('word_opened',git_src+'sounds/word_opened.mp3');
+		
+		game_res.add('button0',git_src+'sounds/button0.mp3');
+		game_res.add('button1',git_src+'sounds/button1.mp3');
+		game_res.add('button2',git_src+'sounds/button2.mp3');
+		game_res.add('button3',git_src+'sounds/button3.mp3');
+		game_res.add('button4',git_src+'sounds/button4.mp3');
+		game_res.add('button5',git_src+'sounds/button5.mp3');
+		
+		//добавляем из листа загрузки
+		for (var i = 0; i < load_list.length; i++)
+			if (load_list[i].class === "sprite" || load_list[i].class === "image" )
+				game_res.add(load_list[i].name, git_src+'res/RUS/'+load_list[i].name+"."+load_list[i].image_format);	
+		
+		game_res.onProgress.add(progress);
+		function progress(loader, resource) {
+			objects.progress_slider.width =  340*loader.progress*0.01;
+		}
+		
+		await new Promise((resolve, reject)=> game_res.load(resolve))
+				
+				
+		//формируем текстуры букв		
+		gres.letters_textures = {А:0,Б:0,В:0,Г:0,Д:0,Е:0,Ж:0,З:0,И:0,К:0,Л:0,М:0,Н:0,О:0,П:0,Р:0,С:0,Т:0,У:0,Ф:0,Х:0,Ц:0,Ч:0,Ш:0,Щ:0,Э:0,Ю:0,Я:0};
+	   
+	   // Define the frame width and height based on the 3x4 grid
+		const keys=Object.keys(gres.letters_textures);
+		const frameWidth = 135;
+		const frameHeight = 135;
+		let ind=0;
+		for (let row = 0; row < 4; row++) {
+			for (let col = 0; col < 7; col++) {
+				const x = col * 135;
+				const y = row * 135;
 
-	//добавляем фоны
-	game_res.add('parallax_bcg', git_src+'res/common/parallax_bcg.jpg');
-	game_res.add('parallax_front', git_src+'res/common/parallax_front.png');
-	
-	//прогресс
-	game_res.onProgress.add(function(loader, resource) {
-		document.getElementById("progressBar").style.width =  Math.round(loader.progress)+"%";
-	});
-	
-	await new Promise((resolve, reject)=> game_res.load(resolve))
+				const frame = new PIXI.Rectangle(x, y, frameWidth, frameHeight);
+				const smallTexture = new PIXI.Texture(gres.letters.texture, frame);
+				gres.letters_textures[keys[ind]]=smallTexture;
+				ind++;
+			}
+		}	
+				
+		anim2.add(objects.loader_cont,{alpha:[1,0],y:[0,450]}, false, 1,'easeInCubic');	
+		objects.progress_bcg.visible=false;
+		objects.progress_slider.visible=false;
 
-	//убираем элементы загрузки
-	document.getElementById("progressFrame").outerHTML = "";	
+	}
 	
-	//короткое обращение к ресурсам
-	gres=game_res.resources;
+}
+
+async function define_platform_and_language(env) {
+	
+	let s = window.location.href;
+	
+	if (env === 'game_monetize') {
+				
+		game_platform = 'GM';
+		LANG = await language_dialog.show();
+		return;
+	}
+	
+	if (s.includes('yandex')||s.includes('app-id=196005')) {
+		
+		game_platform = 'YANDEX';
+		
+		if (s.match(/yandex\.ru|yandex\.by|yandex\.kg|yandex\.kz|yandex\.tj|yandex\.ua|yandex\.uz/))
+			LANG = 0;
+		else 
+			LANG = 1;		
+		return;
+	}
+	
+	if (s.includes('vk.com')) {
+		game_platform = 'VK';	
+		LANG = 0;	
+		return;
+	}
+	
+	if (s.includes('google_play')) {
+			
+		game_platform = 'GOOGLE_PLAY';	
+		LANG = 0;
+		return;
+	}	
+
+	if (s.includes('rustore')) {
+			
+		game_platform = 'RUSTORE';	
+		LANG = 0;
+		return;	
+	}	
+	
+	if (s.includes('crazygames')) {
+			
+		game_platform = 'CRAZYGAMES';	
+		LANG = 0;
+		return;
+	}
+	
+	if (s.includes('127.0')) {
+			
+		game_platform = 'DEBUG';	
+		LANG = 0;
+		return;	
+	}	
+	
+	game_platform = 'UNKNOWN';	
+	LANG = await language_dialog.show();
+	
+
 
 }
 
@@ -1050,7 +1377,11 @@ function vis_change() {
 }
 
 async function init_game_env(lang) {		
-						
+				
+
+	git_src="https://akukamil.github.io/word_game/"
+	//git_src=""
+				
 	document.body.style.webkitTouchCallout = "none";
 	document.body.style.webkitUserSelect = "none";
 	document.body.style.khtmlUserSelect = "none";
@@ -1058,16 +1389,60 @@ async function init_game_env(lang) {
 	document.body.style.msUserSelect = "none";
 	document.body.style.userSelect = "none";		
 								
-	await load_resources();	
+	//ресурсы и короткое обращение
+	game_res=new PIXI.Loader();
+	gres=game_res.resources;
 	
+	await define_platform_and_language();
+	
+	//подгружаем библиотеку аватаров
+	await auth2.load_script('https://akukamil.github.io/poker/multiavatar.min.js');
+
+	document.body.innerHTML='<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items:center;justify-content: center;background-color: rgba(41,41,41,1)}</style>';
+
+
 	//создаем приложение пикси и добавляем тень
 	app.stage = new PIXI.Container();
 	app.renderer = new PIXI.Renderer({width:M_WIDTH, height:M_HEIGHT,antialias:true});	
 	document.body.appendChild(app.renderer.view).style["boxShadow"] = "0 0 15px #000000";
 
-
+	//запускаем главный цикл
+	main_loop.run(1);
+	
+	//событие по изменению размера окна
 	resize();
-	window.addEventListener("resize", resize);	
+	window.addEventListener("resize", resize);
+
+	await main_loader.load1();	
+	await main_loader.load2();
+	
+	await auth2.init();	
+	
+	/*//инициируем файербейс
+	if (firebase.apps.length===0) {
+		firebase.initializeApp({			
+			apiKey: "AIzaSyDEQoP_xNrecObpO0sHPOisMsu01JCmP6Q",
+			authDomain: "poker-cd9ed.firebaseapp.com",
+			databaseURL: "https://poker-cd9ed-default-rtdb.europe-west1.firebasedatabase.app",
+			projectId: "poker-cd9ed",
+			storageBucket: "poker-cd9ed.appspot.com",
+			messagingSenderId: "721039342577",
+			appId: "1:721039342577:web:808922ef505e8dc148e250"
+		});
+	}
+	//короткое обращение к базе данных
+	fbs=firebase.database();
+	*/
+	
+	//доп функция для текста битмап
+	PIXI.BitmapText.prototype.set2=function(text,w){		
+		const t=this.text=text;
+		for (i=t.length;i>=0;i--){
+			this.text=t.substring(0,i)
+			if (this.width<w) return;
+		}	
+	}
+	
 			
 	//создаем спрайты и массивы спрайтов и запускаем первую часть кода
     for (var i = 0; i < load_list.length; i++) {
@@ -1126,9 +1501,8 @@ async function init_game_env(lang) {
         }
     }
 			
-			
-	//запускаем главный цикл
-	main_loop.run(1);
+						
+
 	
 	//это разные события
 	document.addEventListener('visibilitychange', vis_change);
@@ -1137,8 +1511,7 @@ async function init_game_env(lang) {
 	//music.activate();
 		
 	//показыаем основное меню
-	game.cur_level=0;
-	game.process_init(1);
+	game.run_world();
 
 }
 
