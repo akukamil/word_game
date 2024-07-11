@@ -15,7 +15,7 @@ const game_data=[
 	{letters:['В','Г','М','О','Р'],words:['ВОР','РОГ','РОВ','МОР','РОМ','ГРОМ','МОРГ']},
 	{letters:['Б','О','Р','С','Т'],words:['РОТ','БОР','СОР','РОСТ','СБОР','БОРТ','СОРТ','ТРОС']},
 	{letters:['Б','К','Р','Т','А'],words:['АКТ','БАР','РАБ','РАК','БАК','БРАТ','БРАК','КРАБ']},
-	{letters:['В','Д','Е','О','Р'],words:['РОД','ВОР','РОВ','ДВОР','ВРЕД','ЕВРО','ВЕДРО','ВЕДРО','ДРЕВО']},
+	{letters:['В','Д','Е','О','Р'],words:['РОД','ВОР','РОВ','ДВОР','ВРЕД','ЕВРО','ВЕДРО','ДРЕВО']},
 	{letters:['В','К','Р','Т','О'],words:['РОТ','КОТ','ВОР','ТОК','РОК','РОВ','КОРТ','КРОТ','КРОВ']},
 	{letters:['Б','К','Р','А','О'],words:['БОК','БАР','РАБ','РАК','БАК','БОР','РОК','БРАК','КОРА','КРАБ']}
 ];
@@ -103,13 +103,15 @@ class word_field_class extends PIXI.Container{
 	open_word(){
 		
 		const word_len=this.word.length;
-		for (let l=0;l<word_len;l++){
-			this.letters[l].visible=true;			
-			this.letters[l].set_letter_sprite(this.word[l]);
-			anim2.add(this.letters[l].hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
-		}
-
+		for (let l=0;l<word_len;l++)
+			this.open_letter(l);
+	}
+	
+	open_letter(ind){
 		
+		this.letters[ind].visible=true;			
+		this.letters[ind].set_letter_sprite(this.word[ind]);
+		anim2.add(this.letters[ind].hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
 		
 	}
 	
@@ -343,6 +345,7 @@ sound={
 	
 	play(snd_res,is_loop) {
 		
+		console.log('started:',snd_res);
 		if (!this.on||document.hidden)
 			return;
 		
@@ -734,8 +737,8 @@ game={
 		for (let i=0;i<this.letters_num;i++){
 			const letter_cont=objects.letter_buttons[i];
 			letter_cont.visible=true;
-			letter_cont.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*95;
-			const tar_y=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*95;
+			letter_cont.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*100;
+			const tar_y=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*100;
 						
 			letter_cont.set_letter_sprite(letters_to_play[i]);
 			letter_cont.angle=irnd(-10,10);
@@ -856,7 +859,7 @@ game={
 					letter_cont.checked=true;
 					letter_cont.hl.visible=true;
 					anim2.add(letter_cont,{scale_xy:[1,1.1]}, true, 0.15,'ease2back');	
-					sound.play('button0');			
+					sound.play('button'+this.letters_seq.length);			
 					
 					if(!this.word_creation_started){						
 						this.word_creation_started=1;
@@ -925,12 +928,28 @@ game={
 		for (let i=0;i<this.letters_num;i++){
 			const index=shuffled_letters[i];
 			const letter=objects.letter_buttons[index];
-			const tx=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*90;
-			const ty=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*90;
+			const tx=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*100;
+			const ty=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*100;
 			const cur_ang=letter.angle;
 			const tar_ang=irnd(-10,10);
 			anim2.add(letter,{x:[letter.x,tx],y:[letter.y,ty],angle:[cur_ang,tar_ang]}, true, 0.25,'easeInOutCubic');
 		}	
+		
+	},
+	
+	hint_down(){
+		
+		for (let word of objects.words)	{
+			if (word.visible && !word.opened){
+				const first_letter=word.letters[0];
+				if (first_letter.visible===false){
+					word.open_letter(0);
+					sound.play('hint');
+					return;					
+				}
+			}
+		}		
+
 		
 	},
 			
@@ -1030,7 +1049,7 @@ game={
 		//открываем настоящие буквы
 		word_cont.open_word();					
 				
-		//дополнительная анимация
+		//дополнительная анимация доски
 		for (let i=0;i<word_cont.word.length;i++){
 			const fly_letter=objects.fly_letters[i];
 			const flash=objects.flashes.find(f=>f.visible===false);
@@ -1040,10 +1059,16 @@ game={
 			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear');				
 		}		
 
+
 			
 		//если все открыто, то завершаем уровень
 		if (this.all_words_opened()){
-			await anim2.add(objects.board_hl,{alpha:[0,1]}, false, 3,'ease2back');	
+			anim2.add(objects.board_hl,{alpha:[0,1]}, false, 3,'ease2back');	
+			anim2.add(objects.anim_frame3,{scale_xy:[0.666, 1],alpha:[0.9,0]}, false, 3,'linear');	
+			await anim2.wait(0.5);			
+			sound.play('win');
+			await anim2.wait(2.5);
+			
 			this.level_complete_resolver();			
 		}
 
@@ -1242,6 +1267,8 @@ main_loader={
 		game_res.add('button3',git_src+'sounds/button3.mp3');
 		game_res.add('button4',git_src+'sounds/button4.mp3');
 		game_res.add('button5',git_src+'sounds/button5.mp3');
+		game_res.add('hint',git_src+'sounds/hint.mp3');
+		game_res.add('win',git_src+'sounds/win.mp3');
 		
 		//добавляем из листа загрузки
 		for (var i = 0; i < load_list.length; i++)
