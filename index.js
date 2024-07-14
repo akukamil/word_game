@@ -4,7 +4,6 @@ var any_dialog_active=0, some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
 var avatar_loader;
 
-
 const game_data=[
 	{letters:['В','К','Н','О','Е'],words:['ВЕК','КОН','ВЕКО','ОВЕН','ВЕНОК']},
 	{letters:['Б','Л','О','П','Т'],words:['ПОЛ','ЛОБ','ПОТ','ПЛОТ','БОЛТ']},
@@ -20,120 +19,178 @@ const game_data=[
 	{letters:['Б','К','Р','А','О'],words:['БОК','БАР','РАБ','РАК','БАК','БОР','РОК','БРАК','КОРА','КРАБ']}
 ];
 
-class letter_button_class extends PIXI.Container{
+class letter_object_class extends PIXI.Container{
 		
 	constructor(){
 		
 		super();
 		
-		this.letter='';
+		this.letter_text='';
 		
 		this.shadow=new PIXI.Sprite(gres.big_letter_shadow.texture);
-		this.shadow.width=90;
-		this.shadow.height=90;
 		this.shadow.anchor.set(0.5,0.5);
 		
 		this.hl=new PIXI.Sprite(gres.letter_button_hl.texture);
-		this.hl.width=90;
-		this.hl.height=90;
 		this.hl.anchor.set(0.5,0.5);
 		this.hl.visible=false;
 		
 		this.bcg=new PIXI.Sprite(gres.big_letter_bcg.texture);
-		this.bcg.width=90;
-		this.bcg.height=90;
 		this.bcg.anchor.set(0.5,0.5);
 		
-		this.letter_spr=new PIXI.Sprite(gres.letters_textures['А']);
-		this.letter_spr.anchor.set(0.5,0.5);
-		this.letter_spr.scale_xy=0.55;
+		this.bonus=new PIXI.Sprite();
+		this.bonus.anchor.set(0.5,0.5);
+		this.bonus_type='';
+		
+		this.letter_sprite=new PIXI.Sprite(gres.letters_textures['А']);
+		this.letter_sprite.anchor.set(0.5,0.5);
+		this.letter_sprite.width=90;
+		this.letter_sprite.height=90;
+		this.state='holder';
 		
 		this.checked=0;
 		
-		this.addChild(this.shadow,this.hl,this.bcg, this.letter_spr);
+		this.addChild(this.shadow,this.hl,this.bcg,this.bonus,this.letter_sprite);
 	}
 	
-	set_letter_sprite(letter){		
+	add_bonus(bonus){
 		
-		this.letter=letter;
-		this.letter_spr.texture=gres.letters_textures[letter];		
+		this.bonus.visible=true;
+		this.bonus_type=bonus;
 		
+		if (bonus==='note')
+			this.bonus.texture=gres.note_bonus_img.texture;
+		
+		if (bonus==='coin')
+			this.bonus.texture=gres.coin_bonus_img.texture;
+	}
+	
+	set_as_holder(){
+		
+		this.state='holder';
+		this.bonus_type='';
+		this.shadow.visible=false;
+		this.hl.visible=false;
+		this.letter_sprite.visible=false;
+		this.bcg.texture=gres.letter_holder_img.texture;		
+		
+	}
+	
+	set_as_opened_letter(){
+				
+		this.state='opened';
+		this.bcg.texture=gres.fly_button_bcg.texture
+		this.hl.visible=true;
+		this.bonus.visible=false;
+		this.letter_sprite.visible=true;
+		
+	}
+	
+	set_letter(letter_text){		
+		
+		this.letter_text=letter_text;
+		this.letter_sprite.texture=gres.letters_textures[letter_text];		
+		
+	}
+	
+	open(){
+		
+		this.set_as_opened_letter();
+		anim2.add(this.hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
+	}
+	
+	open_as_hint(){
+		this.state='opened';
+		this.letter_sprite.visible=true
+		anim2.add(this.hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
 	}
 	
 }
 
-class word_field_class extends PIXI.Container{
+class word_object_class extends PIXI.Container{
 	
 	constructor(){
 		
 		super();
 		
-		this.word='';
+		this.word_text='';
 		this.opened=0;
-		this.word_len=0;
+		this.word_length=0;
+		this.bonus_type='';
+		this.bonus_letter_object=0;
 		
 		//это буквы
-		this.holders=[];
-		this.letters=[];
-		for(let i=0;i<5;i++){
+		this.letters_objects=[];
+		for(let i=0;i<5;i++){			
 			
-			const holder=new PIXI.Sprite(gres.letter_holder_img.texture);	
-			holder.width=50;
-			holder.height=50;
-			holder.x=i*38;
-			this.holders.push(holder);	
-			
-			const letter=new letter_button_class();
-			letter.y=25;
-			letter.x=25+i*38;
-			letter.bcg.texture=gres.fly_button_bcg.texture;
-			letter.width=50;
-			letter.height=50;
-			letter.tint=0x63472B;
-			letter.shadow.visible=false;
-			letter.hl.visible=false;
-			letter.visible=true;
+			const letter_object=new letter_object_class();
+			letter_object.y=25;
+			letter_object.x=25+i*38;
+			letter_object.bcg.texture=gres.fly_button_bcg.texture;
+			letter_object.width=50;
+			letter_object.height=50;
+			//letter.tint=0x63472B;
+			letter_object.shadow.visible=false;
+			letter_object.hl.visible=false;
+			letter_object.visible=true;
 				
-			this.letters.push(letter);			
+			this.letters_objects.push(letter_object);			
 		}
 		
-		this.addChild(...this.holders,...this.letters);		
+		this.addChild(...this.letters_objects);		
 	}
 	
 	open_word(){
-		
-		const word_len=this.word.length;
-		for (let l=0;l<word_len;l++)
-			this.open_letter(l);
-	}
-	
-	open_letter(ind){
-		
-		this.letters[ind].visible=true;			
-		this.letters[ind].set_letter_sprite(this.word[ind]);
-		anim2.add(this.letters[ind].hl,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 0.5,'linear');	
-		
-	}
-	
-	set_word(word){
-		
-		this.word=word;
-		this.opened=0;
-		
-		const word_len=word.length;
-		this.word_len=word_len;		
 
-		this.holders.forEach(h=>h.visible=false)
-		this.letters.forEach(l=>l.visible=false)
+		this.letters_objects.forEach(l=>l.open());
+	}
+	
+	add_bonus(bonus){
 		
-		for (let l=0;l<word_len;l++){
-			this.holders[l].visible=true;
-			this.letters[l].visible=false;
-			this.letters[l].set_letter_sprite(word[l]);
+		this.bonus_type=bonus;
+		this.bonus_letter_object=this.letters_objects[this.word_length-1];
+		this.bonus_letter_object.add_bonus(bonus);
+		
+	}
+	
+	prepare(word_text){		
+		
+		this.opened=0;
+		this.visible=true;
+		this.bonus_type='';
+		this.bonus_letter_object=0;
+		
+		//запоминаем в форму слово и делаем пустую форму
+		this.word_text=word_text;		
+		this.word_length=word_text.length;
+
+		//сначала скрываем все буквы
+		this.letters_objects.forEach(l=>l.visible=false)
+		
+		for (let l=0;l<this.word_length;l++){
+			this.letters_objects[l].set_as_holder();
+			this.letters_objects[l].set_letter(this.word_text[l]);
+			this.letters_objects[l].visible=true;			
 		}
+
 		
 	}
 		
+}
+
+class anim_object_class extends PIXI.Container{
+		
+	constructor(){
+		super();
+		
+		this.spr1=new PIXI.Sprite();
+		this.spr1.anchor.set(0.5,0.5);
+		
+		this.spr2=new PIXI.Sprite();
+		this.spr2.anchor.set(0.5,0.5);
+		
+		this.addChild(this.spr1,this.spr2);		
+	}	
+	
 }
 
 irnd = function (min,max) {	
@@ -231,6 +288,13 @@ anim2={
 	easeInOutCubic(x) {
 		
 		return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+	},
+	
+	easeInOutBack(x) {
+
+		return x < 0.5
+		  ? (Math.pow(2 * x, 2) * ((this.c2 + 1) * 2 * x - this.c2)) / 2
+		  : (Math.pow(2 * x - 2, 2) * ((this.c2 + 1) * (x * 2 - 2) + this.c2) + 2) / 2;
 	},
 	
 	shake(x) {
@@ -339,13 +403,221 @@ anim2={
 	
 }
 
+anim3={
+		
+	c1: 1.70158,
+	c2: 1.70158 * 1.525,
+	c3: 1.70158 + 1,
+	c4: (2 * Math.PI) / 3,
+	c5: (2 * Math.PI) / 4.5,
+	empty_spr : {x:0,visible:false,ready:true, alpha:0},
+		
+	slot: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+	
+	any_on() {
+		
+		for (let s of this.slot)
+			if (s !== null&&s.block)
+				return true
+		return false;		
+	},
+	
+	wait(seconds){		
+		return this.add(this.empty_spr,{x:[0,1]}, false, seconds,'linear');		
+	},
+	
+	linear(x) {
+		return x
+	},
+	
+	kill_anim(obj) {
+		
+		for (var i=0;i<this.slot.length;i++)
+			if (this.slot[i]!==null)
+				if (this.slot[i].obj===obj)
+					this.slot[i]=null;		
+	},
+	
+	easeOutBack(x) {
+		return 1 + this.c3 * Math.pow(x - 1, 3) + this.c1 * Math.pow(x - 1, 2);
+	},
+	
+	easeOutElastic(x) {
+		return x === 0
+			? 0
+			: x === 1
+			? 1
+			: Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * this.c4) + 1;
+	},
+	
+	easeOutSine(x) {
+		return Math.sin( x * Math.PI * 0.5);
+	},
+	
+	easeOutCubic(x) {
+		return 1 - Math.pow(1 - x, 3);
+	},
+	
+	easeInBack(x) {
+		return this.c3 * x * x * x - this.c1 * x * x;
+	},
+	
+	easeInQuad(x) {
+		return x * x;
+	},
+	
+	easeOutBounce(x) {
+		const n1 = 7.5625;
+		const d1 = 2.75;
+
+		if (x < 1 / d1) {
+			return n1 * x * x;
+		} else if (x < 2 / d1) {
+			return n1 * (x -= 1.5 / d1) * x + 0.75;
+		} else if (x < 2.5 / d1) {
+			return n1 * (x -= 2.25 / d1) * x + 0.9375;
+		} else {
+			return n1 * (x -= 2.625 / d1) * x + 0.984375;
+		}
+	},
+	
+	easeInCubic(x) {
+		return x * x * x;
+	},
+	
+	ease2back(x) {
+		return Math.sin(x*Math.PI);
+	},
+	
+	easeInOutCubic(x) {
+		
+		return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+	},
+	
+	easeInOutBack(x) {
+
+		return x < 0.5
+		  ? (Math.pow(2 * x, 2) * ((this.c2 + 1) * 2 * x - this.c2)) / 2
+		  : (Math.pow(2 * x - 2, 2) * ((this.c2 + 1) * (x * 2 - 2) + this.c2) + 2) / 2;
+	},
+	
+	shake(x) {
+		
+		return Math.sin(x*2 * Math.PI);	
+		
+		
+	},	
+	
+	add (obj,params,vis_on_end,time,block) {
+				
+		//если уже идет анимация данного спрайта то отменяем ее
+		anim2.kill_anim(obj);
+		/*if (anim3_origin === undefined)
+			anim3.kill_anim(obj);*/
+
+		let f=0;
+		//ищем свободный слот для анимации
+		for (var i = 0; i < this.slot.length; i++) {
+
+			if (this.slot[i] === null) {
+
+				obj.visible = true;
+				obj.ready = false;
+				
+				//добавляем дельту к параметрам и устанавливаем начальное положение
+				for (let key in params) {
+					const func=params[key][2];
+					
+					params[key][2]=params[key][1]-params[key][0];	
+					
+					//для возвратных функцие конечное значение равно начальному
+					if (func === 'ease2back'||func==='shake')
+						params[key][1]=params[key][0];						
+					
+					params[key][3]=this[func].bind(anim3),					
+									
+					obj[key]=params[key][0];
+
+				}
+				
+				
+					
+				this.slot[i] = {
+					obj: obj,
+					block:block===undefined,
+					params,
+					vis_on_end,
+					speed: 0.01818 / time,
+					progress: 0
+				};
+				f = 1;
+				break;
+			}
+		}
+		
+		if (f===0) {
+			console.log("Кончились слоты анимации");	
+			
+			
+			//сразу записываем конечные параметры анимации
+			for (let key in params)				
+				obj[key]=params[key][1];			
+			obj.visible=vis_on_end;
+			obj.alpha = 1;
+			obj.ready=true;
+			
+			
+			return new Promise(function(resolve, reject){					
+			  resolve();	  		  
+			});	
+		}
+		else {
+			return new Promise(function(resolve, reject){					
+			  anim3.slot[i].p_resolve = resolve;	  		  
+			});			
+			
+		}
+
+	},	
+	
+	process () {
+		
+		for (var i = 0; i < this.slot.length; i++) {
+			if (this.slot[i] !== null) {
+				
+				let s=this.slot[i];
+				
+				s.progress+=s.speed;		
+				
+				for (let key in s.params)				
+					s.obj[key]=s.params[key][0]+s.params[key][2]*s.params[key][3](s.progress);		
+				
+				//если анимация завершилась то удаляем слот
+				if (s.progress>=0.999) {
+					for (let key in s.params)				
+						s.obj[key]=s.params[key][1];
+					
+					s.obj.visible=s.vis_on_end;
+					if (s.vis_on_end === false)
+						s.obj.alpha = 1;
+					
+					s.obj.ready=true;					
+					s.p_resolve('finished');
+					this.slot[i] = null;
+				}
+			}			
+		}
+		
+	}
+	
+}
+
 sound={	
 	
 	on : 1,
 	
 	play(snd_res,is_loop) {
-		
-		console.log('started:',snd_res);
+				
 		if (!this.on||document.hidden)
 			return;
 		
@@ -676,16 +948,21 @@ game={
 	start_time:0,
 	cur_block:0,
 	on:0,
-	cur_cont:0,
-	next_cont:0,
 	info_ok_resolver:0,
 	level_complete_resolver:0,
+	coins_num:0,
+	notes_num:0,
 		
 	async run_world(){		
 		
 		this.cur_level=0;
 		
-		//вытаксиваем уровень
+		
+		//
+		objects.t_coins.text=this.coins_num;
+		objects.t_notes.text=this.notes_num;
+		
+		//вытаксиваем уровень----------------------------------------------------
 		objects.game_cont.visible=false;
 		objects.info_board_cont.x=M_WIDTH;
 		anim2.add(objects.info_board_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
@@ -725,6 +1002,20 @@ game={
 		
 	},
 
+	change_coins(delta){
+		
+		this.coins_num+=delta;
+		objects.t_coins.text=this.coins_num;
+		anim2.add(objects.t_coins,{scale_xy:[1,1.5]}, true, 0.5,'ease2back');	
+	},
+	
+	change_notes(delta){
+		
+		this.notes_num+=delta;
+		objects.t_notes.text=this.notes_num;
+		anim2.add(objects.t_notes,{scale_xy:[1,1.5]}, true, 0.5,'ease2back');	
+	},
+	
 	show_letters() {			
 		
 		//скрвываем сначала все буквы
@@ -735,27 +1026,26 @@ game={
 		const start_angle=Math.PI*2*Math.random();
 		const letters_to_play=game_data[this.cur_level].letters.sort(()=>0.5-Math.random());
 		for (let i=0;i<this.letters_num;i++){
-			const letter_cont=objects.letter_buttons[i];
-			letter_cont.visible=true;
-			letter_cont.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*100;
+			const letter_object=objects.letter_buttons[i];
+			letter_object.visible=true;
+			letter_object.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*100;
 			const tar_y=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*100;
-						
-			letter_cont.set_letter_sprite(letters_to_play[i]);
-			letter_cont.angle=irnd(-10,10);
-			
-			anim2.add(letter_cont,{y:[800,tar_y]}, true, 0.5,'easeOutBack');	
-		}
 		
-
-			
+			letter_object.set_letter(letters_to_play[i]);
+			letter_object.angle=irnd(-10,10);
+			letter_object.scale_xy=0.7;
+		
+			anim2.add(letter_object,{y:[800,tar_y]}, true, 0.5,'easeOutBack');	
+		}			
 	},
 		
 	prepare_words(){
 		
-		//располагаем табло со словами		
-		objects.words.forEach(w=>w.visible=false);
+		//сначала убираем все слова
+		objects.words_objects.forEach(w=>w.visible=false);
 		
 		const words_to_guess=game_data[this.cur_level].words;
+		const num_of_words=words_to_guess.length;
 		const num_of_letters=words_to_guess.reduce((acc, curr) => acc + curr.length,0);
 		const x_len=Math.round(num_of_letters/2.9);
 		
@@ -765,33 +1055,34 @@ game={
 		let cur_line=0;
 		let end_of_field_x=0;
 		const word_lines=[[],[],[],[],[],[],[],[],[]];
-		for (let i=0;i<words_to_guess.length;i++){
+		for (let i=0;i<num_of_words;i++){
 			
-			const word=objects.words[i];
-			const word_len=words_to_guess[i].length;			
-			word.set_word(words_to_guess[i]);
-			word.visible=true;
+			const word_object=objects.words_objects[i];
+			const word_text=words_to_guess[i];
+			const word_len=word_text.length;		
+			
+			word_object.prepare(word_text);
 			const line_len_pred=cur_line_chars_num+word_len;
 			
 			if (line_len_pred>x_len){								
 				cur_line_chars_num=word_len;								
 				end_line_y+=50;	
-				word.x=0;
-				end_line_x=word.width;
+				word_object.x=0;
+				end_line_x=word_object.width;
 				cur_line++;				
 			}else{				
 				cur_line_chars_num+=word_len;								
-				word.x=end_line_x;
-				end_line_x=word.x+word.width;				
+				word_object.x=end_line_x;
+				end_line_x=word_object.x+word_object.width;				
 			}
 			
 			//слова по строкам
-			word_lines[cur_line].push(word);
+			word_lines[cur_line].push(word_object);
 			
 			//конец поля со словами
 			end_of_field_x=Math.max(end_of_field_x,end_line_x);
 						
-			word.y=end_line_y;			
+			word_object.y=end_line_y;			
 		}		
 		
 		//центруем все строки
@@ -813,6 +1104,15 @@ game={
 		objects.words_cont.scale_xy=tar_scale;
 		objects.words_cont.x=M_WIDTH*0.5-objects.words_cont.width*0.5;
 		objects.words_cont.y=215-objects.words_cont.height*0.5;
+		
+		
+		//добавляем бонусы
+		const shuffled_words=[...Array(num_of_words).keys()].sort(()=>0.5-Math.random());		
+		objects.words_objects[shuffled_words[0]].add_bonus('coin');
+		objects.words_objects[shuffled_words[1]].add_bonus('note');
+		
+		
+		
 	},
 	
 	drop_letters(){
@@ -826,48 +1126,47 @@ game={
 	
 	area_move(e){
 		
-		const ID = Math.random();
 		if (!this.word_creation_started) return;
 		
-		//координаты указателя
+		//получаем координаты указателя
 		const mx = e.data.global.x/app.stage.scale.x;
 		const my = e.data.global.y/app.stage.scale.y;
 		const r=objects.letter_buttons[0].bcg.width*0.5;
 		
-		//проверяем выход за пределы зоны------
+		//проверяем если нажали или вышли за пределы зоны------
 		const cx=objects.letters_area_bcg.x;
 		const cy=objects.letters_area_bcg.y;
 		const dx=mx-cx;
 		const dy=my-cy;
 		const d=Math.sqrt(dx*dx+dy*dy);
-		if (d>objects.letters_area_bcg.width*0.5)
-			this.area_up();
+		if (d>objects.letters_area_bcg.width*0.5){
+			this.area_up();		
+			return;
+		}
+
 		
 		//ищем пересекающиеся и не выбраные еще буквы
 		for (let i=0;i<this.letters_num;i++){
-			const letter_cont=objects.letter_buttons[i];
-			if (!letter_cont.checked){
+			const letter_object=objects.letter_buttons[i];
+			if (!letter_object.checked){
 				
-				const lx=letter_cont.x;
-				const ly=letter_cont.y;
+				const lx=letter_object.x;
+				const ly=letter_object.y;
 
 				const dx=mx-lx;
 				const dy=my-ly;
 				const d=Math.sqrt(dx*dx+dy*dy);
 				if (d<r){					
 									
-					letter_cont.checked=true;
-					letter_cont.hl.visible=true;
-					anim2.add(letter_cont,{scale_xy:[1,1.1]}, true, 0.15,'ease2back');	
+					//выделяем выбранную букву-------------
+					letter_object.checked=true;
+					letter_object.hl.visible=true;
+					anim2.add(letter_object,{scale_xy:[0.7,0.9]}, true, 0.15,'ease2back');	
 					sound.play('button'+this.letters_seq.length);			
 					
-					if(!this.word_creation_started){						
-						this.word_creation_started=1;
-						return;
-					}
 
-					this.letters_seq.push(letter_cont);
-					this.add_letter_and_check(letter_cont.letter);
+					this.letters_seq.push(letter_object);
+					this.add_letter(letter_object.letter_text);
 
 				}				
 			}			
@@ -890,11 +1189,28 @@ game={
 		
 		this.word_creation_started=1;
 		this.area_move(e);
-		return;		
-	
+
 	},
 	
-	area_up(){
+	area_up(){	
+		
+		
+		//проверяем есть ли совпадения
+		const matched_word_object=objects.words_objects.find(function(w){return w.word_text===objects.typing_word.text&&w.visible});
+		
+		//проверяем открытое слово
+		if (matched_word_object){
+			
+			if (matched_word_object.opened){
+				sound.play('word_opened');
+				anim2.add(matched_word_object,{x:[matched_word_object.x,matched_word_object.x+5]}, true, 0.15,'shake');
+			}else{
+				matched_word_object.opened=1;
+				this.open_word_anim(matched_word_object);					
+				
+			}				
+		}
+
 		
 		objects.typing_word.text='';
 		objects.typing_word_bcg.visible=false;
@@ -939,17 +1255,20 @@ game={
 	
 	hint_down(){
 		
-		for (let word of objects.words)	{
-			if (word.visible && !word.opened){
-				const first_letter=word.letters[0];
-				if (first_letter.visible===false){
-					word.open_letter(0);
+		if (this.coins_num<1) return;
+		
+		this.change_coins(-1);
+		
+		for (let word_object of objects.words_objects)	{
+			if (word_object.visible && !word_object.opened){
+				const first_letter_object=word_object.letters_objects[0];
+				if (first_letter_object.state==='holder'){
+					first_letter_object.open_as_hint();
 					sound.play('hint');
 					return;					
 				}
 			}
-		}		
-
+		}	
 		
 	},
 			
@@ -980,60 +1299,42 @@ game={
 	
 	all_words_opened(){
 		
-		for (let word of objects.words)			
+		for (let word of objects.words_objects)			
 			if (word.visible && !word.opened)
 				return false;	
 		return true;
 
 	},
 	
-	add_letter_and_check(letter){
+	add_letter(letter_text){
 		
-		objects.typing_word.text+=letter;
+		objects.typing_word.text+=letter_text;
 		objects.typing_word_bcg.width=objects.typing_word.width+40;
 		objects.typing_word_bcg.pivot.x=objects.typing_word_bcg.width*0.5;
 		objects.typing_word_bcg.visible=true;
 		
-		//проверяем есть ли совпадения
-		const matched_word=objects.words.find(function(w){return w.word===objects.typing_word.text&&w.visible});
-		
-		//проверяем открытое слово
-		if (matched_word?.opened){
-			//sound.play('word_opened');
-			anim2.add(matched_word,{x:[matched_word.x,matched_word.x+5]}, true, 0.15,'shake');
-			return;
-		}
-		
-		
-		if (!matched_word) return;
-		
-		matched_word.opened=1;
-		this.open_word_anim(matched_word);		
-		this.area_up();
-
-		
 	},
 	
-	async open_word_anim(word_cont){
+	async open_word_anim(word_object){
 				
 		//буквы летят на места
 		for (let i=0;i<this.letters_seq.length;i++){
 			
-			const letter_cont=this.letters_seq[i];
-			const fly_letter=objects.fly_letters[i];
+			const letter_object=this.letters_seq[i];
+			const fly_letter=objects.fly_letters[i];			
 			
+			const sx=letter_object.x;
+			const sy=letter_object.y;
+			const s_angle=letter_object.angle;
+			fly_letter.set_letter(letter_object.letter_text);
 			
-			const sx=letter_cont.x;
-			const sy=letter_cont.y;
-			const s_angle=letter_cont.angle;
-			fly_letter.set_letter_sprite(letter_cont.letter);
+			const cur_scale=letter_object.scale_xy;
+			const g_holder_width=word_object.letters_objects[i].width*objects.words_cont.scale_xy;
 			
-			const cur_scale=letter_cont.scale_xy;
-			const g_holder_width=word_cont.holders[i].width*objects.words_cont.scale_xy;
-			
-			const tar_x=g_holder_width*0.5+objects.words_cont.x+word_cont.x*objects.words_cont.scale_x+word_cont.holders[i].x*objects.words_cont.scale_x;
-			const tar_y=g_holder_width*0.5+objects.words_cont.y+word_cont.y*objects.words_cont.scale_y+word_cont.holders[i].y*objects.words_cont.scale_y;
-			const tar_scale=objects.words_cont.scale_xy*word_cont.holders[i].scale_xy;
+			//определяем глобальное положение целевых букв
+			const tar_x=(word_object.letters_objects[i].x+word_object.x)*objects.words_cont.scale_x+objects.words_cont.x;
+			const tar_y=(word_object.letters_objects[i].y+word_object.y)*objects.words_cont.scale_y+objects.words_cont.y;
+			const tar_scale=objects.words_cont.scale_xy*word_object.letters_objects[i].scale_xy;
 			
 			anim2.add(fly_letter,{x:[sx,tar_x],y:[sy,tar_y],scale_xy:[cur_scale,tar_scale],alpha:[0.5,1],angle:[s_angle,0]}, true, 0.5,'linear');	
 			
@@ -1043,23 +1344,47 @@ game={
 		await anim2.wait(0.5);
 		
 		sound.play('word_open');
-		//убираем летящие буквы
-		objects.fly_letters.forEach(f=>f.visible=false);
 		
-		//открываем настоящие буквы
-		word_cont.open_word();					
+		//убираем летящие буквы и открываем настоящие буквы
+		objects.fly_letters.forEach(f=>f.visible=false);
+		word_object.open_word();		
+	
 				
-		//дополнительная анимация доски
-		for (let i=0;i<word_cont.word.length;i++){
-			const fly_letter=objects.fly_letters[i];
+		//дополнительная анимация доски - звездочки вокруг каждой буквы
+		for (let i=0;i<word_object.word_text.length;i++){
+			const letter_object=objects.fly_letters[i];
 			const flash=objects.flashes.find(f=>f.visible===false);
-			flash.x=fly_letter.x;
-			flash.y=fly_letter.y;
+			flash.x=letter_object.x;
+			flash.y=letter_object.y;
 			flash.angle=irnd(0,360);
 			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear');				
 		}		
-
-
+		
+		
+		//если в слове есть бонус		
+		if (word_object.bonus_type) {			
+			
+			const sx=(word_object.bonus_letter_object.x+word_object.x)*objects.words_cont.scale_x+objects.words_cont.x;
+			const sy=(word_object.bonus_letter_object.y+word_object.y)*objects.words_cont.scale_y+objects.words_cont.y;			
+			if (word_object.bonus_type==='note') {
+				//objects.anim_obj.spr1.texture=gres.white_orb_img.texture;	
+				//objects.anim_obj.spr2.texture=gres.note_bonus_img.texture;	
+				//anim3.add(objects.anim_obj.spr1,{alpha:[0,1,'ease2back'],angle:[0,1000,'linear']}, false, 1);
+				objects.fly_coin.texture=gres.note_bonus_img.texture;
+				anim3.add(objects.fly_coin,{x:[sx,360,'linear'],y:[sy,20,'easeInOutCubic'],angle:[0,30,'ease2back'],scale_xy:[0.6,1.2,'ease2back'],alpha:[0.3,1,'ease2back']}, false, 1).then(()=>{
+					this.change_notes(1);
+				})
+			}else{
+				//objects.anim_obj.spr1.texture=gres.white_orb_img.texture;	
+				//objects.anim_obj.spr2.texture=gres.coin_bonus_img.texture;	
+				//anim3.add(objects.anim_obj.spr1,{alpha:[0,1,'ease2back'],angle:[0,1000,'linear']}, false, 1);
+				objects.fly_coin.texture=gres.coin_bonus_img.texture;
+				anim3.add(objects.fly_coin,{x:[sx,30,'linear'],y:[sy,20,'easeInOutCubic'],angle:[0,30,'ease2back'],scale_xy:[0.6,1.2,'ease2back'],alpha:[0.3,1,'ease2back']}, false, 1).then(()=>{
+					this.change_coins(1);
+				})
+			
+			}			
+		}
 			
 		//если все открыто, то завершаем уровень
 		if (this.all_words_opened()){
@@ -1407,7 +1732,7 @@ async function init_game_env(lang) {
 				
 
 	git_src="https://akukamil.github.io/word_game/"
-	//git_src=""
+	git_src=""
 				
 	document.body.style.webkitTouchCallout = "none";
 	document.body.style.webkitUserSelect = "none";
@@ -1423,7 +1748,7 @@ async function init_game_env(lang) {
 	await define_platform_and_language();
 	
 	//подгружаем библиотеку аватаров
-	await auth2.load_script('https://akukamil.github.io/poker/multiavatar.min.js');
+	await auth2.load_script('multiavatar.min.js');
 
 	document.body.innerHTML='<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items:center;justify-content: center;background-color: rgba(41,41,41,1)}</style>';
 
@@ -1561,6 +1886,7 @@ main_loop={
 		
 		//обрабатываем анимации
 		anim2.process(main_loop.delta);		
+		anim3.process(main_loop.delta);		
 		
 		//отображаем сцену
 		app.renderer.render(app.stage);		
