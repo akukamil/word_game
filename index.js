@@ -1,8 +1,7 @@
 var M_WIDTH=440, M_HEIGHT=740;
-var app ={stage:{},renderer:{}}, game_res, objects={}, game_tick=0, LANG = 0, git_src, world;
-var any_dialog_active=0, some_process = {}, game_platform='';
+var app ={stage:{},renderer:{}}, game_res, objects={}, game_tick=0, LANG = 0, git_src;
+var some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
-var avatar_loader;
 
 const game_data=[
 	{letters:['В','К','Н','О','Е'],words:['ВЕК','КОН','ВЕКО','ОВЕН','ВЕНОК']},
@@ -411,8 +410,8 @@ anim3={
 	c4: (2 * Math.PI) / 3,
 	c5: (2 * Math.PI) / 4.5,
 	empty_spr : {x:0,visible:false,ready:true, alpha:0},
-		
-	slot: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+			
+	slots: new Array(20).fill().map(u => ({obj:{},on:0,params_num:0,p_resolve:0,progress:0,vis_on_end:false,blocking:false,tm:0,params:new Array(10).fill().map(u => ({param:'x',s:0,f:0,d:0,func:this.linear}))})),
 	
 	any_on() {
 		
@@ -432,10 +431,13 @@ anim3={
 	
 	kill_anim(obj) {
 		
-		for (var i=0;i<this.slot.length;i++)
-			if (this.slot[i]!==null)
-				if (this.slot[i].obj===obj)
-					this.slot[i]=null;		
+		for (var i=0;i<this.slots.length;i++){
+			const slot=this.slots[i];
+			if (slot.on&&slot.obj===obj){
+				slot.p_resolve(1);
+				slot.on=0;				
+			}
+		}	
 	},
 	
 	easeOutBack(x) {
@@ -508,108 +510,112 @@ anim3={
 		
 	},	
 	
-	add (obj,params,vis_on_end,time,block) {
+	add (obj, inp_params, vis_on_end, time, blocking) {
 				
 		//если уже идет анимация данного спрайта то отменяем ее
-		anim2.kill_anim(obj);
-		/*if (anim3_origin === undefined)
-			anim3.kill_anim(obj);*/
+		anim3.kill_anim(obj);
 
-		let f=0;
+
+		let found=false;
 		//ищем свободный слот для анимации
-		for (var i = 0; i < this.slot.length; i++) {
+		for (let i = 0; i < this.slots.length; i++) {
 
-			if (this.slot[i] === null) {
+			const slot=this.slots[i];
+			if (slot.on) continue;
+			
+			found=true;
+			
+			obj.visible = true;
+			obj.ready = false;
+					
+			//заносим базовые параметры слота
+			slot.on=1;
+			slot.params_num=Object.keys(inp_params).length;			
+			slot.obj=obj;
+			slot.vis_on_end=vis_on_end;
+			slot.blocking=blocking||false;
+			slot.speed=0.01818 / time;
+			slot.progress=0;			
+			
+			//добавляем дельту к параметрам и устанавливаем начальное положение
+			let ind=0;
+			for (const param in inp_params) {
+				
+				const s=inp_params[param][0];
+				let f=inp_params[param][1];
+				const d=f-s;					
+				const func=this[inp_params[param][2]];
+								
+				//для возвратных функцие конечное значение равно начальному что в конце правильные значения присвоить
+				if (func === 'ease2back'||func==='shake') f=s;
+				
+				slot.params[ind].param=param;
+				slot.params[ind].s=s;
+				slot.params[ind].f=f;
+				slot.params[ind].d=d;
+				slot.params[ind].func=func;
+				ind++;
 
-				obj.visible = true;
-				obj.ready = false;
-				
-				//добавляем дельту к параметрам и устанавливаем начальное положение
-				for (let key in params) {
-					const func=params[key][2];
-					
-					params[key][2]=params[key][1]-params[key][0];	
-					
-					//для возвратных функцие конечное значение равно начальному
-					if (func === 'ease2back'||func==='shake')
-						params[key][1]=params[key][0];						
-					
-					params[key][3]=this[func].bind(anim3),					
-									
-					obj[key]=params[key][0];
-
-				}
-				
-				
-					
-				this.slot[i] = {
-					obj: obj,
-					block:block===undefined,
-					params,
-					vis_on_end,
-					speed: 0.01818 / time,
-					progress: 0
-				};
-				f = 1;
-				break;
+				//фиксируем начальное значение параметра
+				obj[param]=s;
 			}
+			
+			return new Promise(resolve=>{
+				slot.p_resolve = resolve;	  		  
+			});		
 		}
+
+		console.log("Кончились слоты анимации");	
 		
-		if (f===0) {
-			console.log("Кончились слоты анимации");	
-			
-			
-			//сразу записываем конечные параметры анимации
-			for (let key in params)				
-				obj[key]=params[key][1];			
-			obj.visible=vis_on_end;
-			obj.alpha = 1;
-			obj.ready=true;
-			
-			
-			return new Promise(function(resolve, reject){					
-			  resolve();	  		  
-			});	
-		}
-		else {
-			return new Promise(function(resolve, reject){					
-			  anim3.slot[i].p_resolve = resolve;	  		  
-			});			
-			
-		}
+		//сразу записываем конечные параметры анимации
+		for (let param in params)
+			obj[param]=params[param][1];
+		obj.visible=vis_on_end;
+		obj.alpha = 1;
+		obj.ready=true;
+
 
 	},	
 	
 	process () {
 		
-		for (var i = 0; i < this.slot.length; i++) {
-			if (this.slot[i] !== null) {
+		for (var i = 0; i < this.slots.length; i++) {
+			const slot=this.slots[i];
+			const obj=slot.obj;
+			if (slot.on) {
 				
-				let s=this.slot[i];
+				slot.progress+=slot.speed;		
 				
-				s.progress+=s.speed;		
-				
-				for (let key in s.params)				
-					s.obj[key]=s.params[key][0]+s.params[key][2]*s.params[key][3](s.progress);		
+				for (let i=0;i<slot.params_num;i++){
+					
+					const param_data=slot.params[i];
+					const param=param_data.param;
+					const s=param_data.s;
+					const d=param_data.d;
+					const func=param_data.func;
+					slot.obj[param]=s+d*func(slot.progress);					
+				}
 				
 				//если анимация завершилась то удаляем слот
-				if (s.progress>=0.999) {
-					for (let key in s.params)				
-						s.obj[key]=s.params[key][1];
+				if (slot.progress>=0.999) {
 					
-					s.obj.visible=s.vis_on_end;
-					if (s.vis_on_end === false)
-						s.obj.alpha = 1;
+					//заносим конечные параметры
+					for (let i=0;i<slot.params_num;i++){
+						const param=slot.params[i].param;
+						const f=slot.params[i].f;
+						slot.obj[param]=f;
+					}
 					
-					s.obj.ready=true;					
-					s.p_resolve('finished');
-					this.slot[i] = null;
+					slot.obj.visible=slot.vis_on_end;
+					slot.obj.alpha = 1*slot.vis_on_end;
+					
+					slot.obj.ready=true;
+					slot.p_resolve(1);
+					slot.on = 0;
 				}
 			}			
-		}
-		
-	}
-	
+		}		
+	}	
 }
 
 sound={	
@@ -771,8 +777,7 @@ auth2 = {
 		return undefined;	
 		
 	},
-	
-	
+		
 	async search_in_crazygames(){
 		if(!window.CrazyGames.SDK)
 			return {};
@@ -786,8 +791,7 @@ auth2 = {
 		const user = window.jwt_decode(token);
 		return user || {};
 	},
-	
-	
+		
 	async init() {	
 				
 		if (game_platform === 'GM') {
@@ -936,6 +940,119 @@ auth2 = {
 	}
 }
 
+mini_piano={
+	
+	notes_loader:{},
+	midi_number_to_name:{M21:'A0',M22:'Bb0',M23:'B0',M24:'C1',M25:'Db1',M26:'D1',M27:'Eb1',M28:'E1',M29:'F1',M30:'Gb1',M31:'G1',M32:'Ab1',M33:'A1',M34:'Bb1',M35:'B1',M36:'C2',M37:'Db2',M38:'D2',M39:'Eb2',M40:'E2',M41:'F2',M42:'Gb2',M43:'G2',M44:'Ab2',M45:'A2',M46:'Bb2',M47:'B2',M48:'C3',M49:'Db3',M50:'D3',M51:'Eb3',M52:'E3',M53:'F3',M54:'Gb3',M55:'G3',M56:'Ab3',M57:'A3',M58:'Bb3',M59:'B3',M60:'C4',M61:'Db4',M62:'D4',M63:'Eb4',M64:'E4',M65:'F4',M66:'Gb4',M67:'G4',M68:'Ab4',M69:'A4',M70:'Bb4',M71:'B4',M72:'C5',M73:'Db5',M74:'D5',M75:'Eb5',M76:'E5',M77:'F5',M78:'Gb5',M79:'G5',M80:'Ab5',M81:'A5',M82:'Bb5',M83:'B5',M84:'C6',M85:'Db6',M86:'D6',M87:'Eb6',M88:'E6',M89:'F6',M90:'Gb6',M91:'G6',M92:'Ab6',M93:'A6',M94:'Bb6',M95:'B6',M96:'C7',M97:'Db7',M98:'D7',M99:'Eb7',M100:'E7',M101:'F7',M102:'Gb7',M103:'G7',M104:'Ab7',M105:'A7',M106:'Bb7',M107:'B7',M108:'C8'},
+	notes_num:0,
+	notes_data:[],
+	
+	async load(file){
+		
+		const midi = await Midi.fromUrl(`new_midi/${file}`);
+		this.notes_data=midi.tracks[0].notes.map(n=>{return {midi:n.midi,time:n.time,on:0}});
+		this.notes_num=this.notes_data.length;
+
+		const first_note_time=this.notes_data[0].time;
+		this.notes_data.forEach(n=>n.time-=first_note_time);
+
+
+		//подгружаем ноты которые будут играть и звучать
+		if(this.notes_loader['piano']===undefined)
+			this.notes_loader['piano']=new PIXI.Loader();
+		for (let note_data of this.notes_data){
+			const note_ind='M'+note_data.midi;
+			const note_name=this.midi_number_to_name[note_ind];
+			
+			if (this.notes_loader['piano'].resources[note_name]===undefined)
+				this.notes_loader['piano'].add(note_name,`acoustic_grand_piano/${note_name}.mp3`);			
+		}
+		
+		await new Promise(resolve=>this.notes_loader['piano'].load(resolve));
+		
+		//располагаем на панели
+		for (let n=0;n<this.notes_num;n++){
+			
+			const x=n%15;
+			const y=Math.floor(n/15);
+			const note=objects.notes[n];
+			note.x=40+x*25;
+			note.y=260+y*35;				
+
+			this.notes_data[n].on=0;
+			note.alpha=0.3;				
+
+		}		
+	},
+	
+	update_notes(){
+		
+		const off_notes=this.notes_data.filter(n=>n.on===0);
+		const shuffled_notes=off_notes.sort(()=>0.5-Math.random());
+		for (let n=0;n<game.notes_num;n++){
+			const random_note=shuffled_notes[n];
+			random_note.on=1;			
+		}
+		
+		//обновляем вид нот
+		for (let n=0;n<this.notes_num;n++){		
+
+			const note=objects.notes[n];
+			const note_on=this.notes_data[n].on
+			if(note_on)
+				note.alpha=1;
+			else
+				note.alpha=0.3;
+		}	
+
+		game.change_notes(-game.notes_num);
+	},
+	
+	async play(){		
+						
+						
+		for (let i=0;i<this.notes_num;i++){
+			const note_data=this.notes_data[i];
+			const note_ind='M'+note_data.midi;
+			const note_name=this.midi_number_to_name[note_ind];
+			const note_time=note_data.time*800;
+			
+			setTimeout(() => {
+				this.play_note(note_name,i);
+			}, note_time);
+		}
+				
+	},
+	
+	play_note(note_name,note_ind){
+		
+		
+		const note_spr=objects.notes[note_ind];
+		anim2.add(note_spr,{scale_xy:[1,1.5]}, true, 0.15,'ease2back');		
+		
+		
+		const note_data=this.notes_data[note_ind];
+		if (!note_data.on){			
+			sound.play('locked');
+			return;
+		}		
+		
+		//это источник звука
+		const context=PIXI.sound.context.audioContext;
+		var source = context.createBufferSource();
+		
+		source.playbackRate.value=1;
+		source.buffer = this.notes_loader['piano'].resources[note_name].sound.media.buffer;			
+		source.connect(context.destination);			
+
+		source.start(0);
+	},
+	
+	
+	
+	
+}
+
 game={
 
 	score:0,
@@ -954,9 +1071,9 @@ game={
 	notes_num:0,
 		
 	async run_world(){		
+				
 		
-		this.cur_level=0;
-		
+		this.cur_level=0;		
 		
 		//
 		objects.t_coins.text=this.coins_num;
@@ -969,9 +1086,12 @@ game={
 		objects.level_info.text=`Уровень ${this.cur_level+1}/${game_data.length}`;
 		objects.t_level.text=objects.level_info.text;
 				
+		//загружаем песню
+		await mini_piano.load('143.mid');
+				
 		for (let i=0;i<game_data.length;i++){
 							
-			//ждем нажатия кнопки
+			//ждем нажатия кнопки			
 			await new Promise(res=>{game.info_ok_resolver=res})
 			
 			//располагаем слова следующего уровня
@@ -995,10 +1115,25 @@ game={
 			//*************двигаем и показываем объявление
 			objects.level_info.text=`Уровень ${this.cur_level+1}/${game_data.length}`;
 			objects.t_level.text=objects.level_info.text;
+			mini_piano.update_notes();
 			anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
 			await anim2.add(objects.info_board_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');				
 						
 		}	
+		
+	},
+	
+	arrange_notes(){
+		
+		
+		
+		
+	},
+	
+	play_note(note){
+		
+		
+		
 		
 	},
 
@@ -1221,17 +1356,10 @@ game={
 		console.log('AREA_UP');	
 	},
 		
-	pause_down(){
+
+	play_notes_button_down(){
 		
-		if (anim2.any_on()||objects.pause_cont.visible||!this.on) return;		
-		this.on=0;
-		
-		sound.play('click');
-		some_process.game=function(){};
-		
-		//
-		objects.lock_screen.visible=true;
-		anim2.add(objects.pause_cont,{y:[800,objects.pause_cont.sy]}, true, 0.3,'linear');
+		mini_piano.play();
 		
 	},
 	
@@ -1372,7 +1500,7 @@ game={
 				//anim3.add(objects.anim_obj.spr1,{alpha:[0,1,'ease2back'],angle:[0,1000,'linear']}, false, 1);
 				objects.fly_coin.texture=gres.note_bonus_img.texture;
 				anim3.add(objects.fly_coin,{x:[sx,360,'linear'],y:[sy,20,'easeInOutCubic'],angle:[0,30,'ease2back'],scale_xy:[0.6,1.2,'ease2back'],alpha:[0.3,1,'ease2back']}, false, 1).then(()=>{
-					this.change_notes(1);
+					this.change_notes(3);
 				})
 			}else{
 				//objects.anim_obj.spr1.texture=gres.white_orb_img.texture;	
@@ -1400,31 +1528,8 @@ game={
 		
 	},
 	
-	clear(){
-		
-		//сначала очищаем
-		for (let body of s_bodies)	
-			world.destroyBody(body);
-		s_bodies=[];	
-		
-		//сначала очищаем
-		for (let body of d_bodies)	
-			world.destroyBody(body);
-		d_bodies=[];
-		
-		// скрываем все блоки
-		objects.blocks.forEach(b=>b.visible=false);
-		objects.balls.forEach(b=>b.visible=false);
-		
-		//мешок
-		objects.sack_back.visible=false;
-		objects.sack_front.visible=false;
-		
-	},
-	
 	async close(){
 				
-
 		this.clear();
 		
 		some_process.game=function(){};
@@ -1594,6 +1699,7 @@ main_loader={
 		game_res.add('button5',git_src+'sounds/button5.mp3');
 		game_res.add('hint',git_src+'sounds/hint.mp3');
 		game_res.add('win',git_src+'sounds/win.mp3');
+		game_res.add('locked',git_src+'sounds/locked.mp3');
 		
 		//добавляем из листа загрузки
 		for (var i = 0; i < load_list.length; i++)
@@ -1748,8 +1854,9 @@ async function init_game_env(lang) {
 	await define_platform_and_language();
 	
 	//подгружаем библиотеку аватаров
-	await auth2.load_script('multiavatar.min.js');
-
+	await auth2.load_script('multiavatar.min.js');	
+	await auth2.load_script('Midi.js');
+	
 	document.body.innerHTML='<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items:center;justify-content: center;background-color: rgba(41,41,41,1)}</style>';
 
 
