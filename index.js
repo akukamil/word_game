@@ -2805,6 +2805,7 @@ game={
 				});
 				this.letters_num=unique_letters.length;
 				this.show_letters(unique_letters);	
+				this.out_words=[];
 				this.word_creation_started=0;
 				this.combo=-1;
 				this.game_active=1;
@@ -3052,7 +3053,7 @@ game={
 		const rscl_total=Math.min(rscl_x,rscl_y);
 		objects.crossword_cont.scale_xy=rscl_total;
 		objects.crossword_cont.x=60*rscl_total+(440-objects.crossword_cont.width)*0.5;
-		objects.crossword_cont.y=60+60*rscl_total+(300-objects.crossword_cont.height)*0.5;
+		objects.crossword_cont.y=70+60*rscl_total+(300-objects.crossword_cont.height)*0.5;
 		
 	},
 	
@@ -3340,7 +3341,7 @@ game={
 				free_spr.texture=gres.stars3_img.texture;
 				free_spr.x=220;
 				free_spr.y=250;
-				anim2.add(free_spr,{alpha:[1,0],scale_xy:[0.5,1.2]}, false, 2.5,'linear');				
+				anim2.add(free_spr,{alpha:[1,0],scale_xy:[0.5,1.2]}, false, 2.5,'linear',false);				
 			}
 			
 			await anim2.wait(0.5);			
@@ -3370,7 +3371,7 @@ game={
 		const combo_texture=gres['combo_'+Math.min(this.combo,3)].texture;
 		objects.combo_caption.texture=combo_texture;
 		
-		await anim3.add(objects.combo_caption,{alpha:[0,1,'linear'],scale_xy:[0,0.666,'easeOutBack']}, true, 0.25);
+		await anim3.add(objects.combo_caption,{alpha:[0,1,'linear'],scale_xy:[0,0.666,'easeOutBack']}, true, 0.25,false);
 		
 		const anim_obj1=objects.anim_objects.find(o=>o.visible===false);
 		anim_obj1.texture=gres['quad_hl'+Math.min(this.combo,3)].texture;
@@ -3378,14 +3379,14 @@ game={
 		anim_obj1.y=420;
 		anim_obj1.angle=0;
 		anim_obj1.scale_xy=0.5;
-		anim2.add(anim_obj1,{scale_xy:[0.5,1.2],alpha:[0.5,0]},false,3,'linear');
+		anim2.add(anim_obj1,{scale_xy:[0.5,1.2],alpha:[0.5,0]},false,3,'linear',false);
 		
 		
-		anim3.add(anim_obj1,{alpha:[0.5,0,'linear'],scale_xy:[0.5,1,'easeOutBack']}, false, 2.2);
+		anim3.add(anim_obj1,{alpha:[0.5,0,'linear'],scale_xy:[0.5,1,'easeOutBack']}, false, 2.2,false);
 		
 		
 		await new Promise(resolve=> {setTimeout(resolve, 750);});
-		await anim3.add(objects.combo_caption,{scale_xy:[0.666,0,'easeInBack']}, false, 0.25);
+		await anim3.add(objects.combo_caption,{scale_xy:[0.666,0,'easeInBack']}, false, 0.25,false);
 	},
 	
 	async close(){
@@ -4304,7 +4305,7 @@ async function define_platform_and_language(env) {
 	}	
 	
 	game_platform = 'UNKNOWN';	
-	LANG = await language_dialog.show();
+	LANG = 0;
 	
 
 
