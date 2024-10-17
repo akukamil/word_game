@@ -3419,14 +3419,14 @@ quiz1={
 		
 		
 		//если это первый раз в игре
-		//if (my_data.first_log){
+		if (my_data.first_log){
 			objects.tutorial_info.text='Соединяй буквы и составляй слова отгадывая кроссворд. Первый игрок отгадавший все слова в кроссворде получает бонус!';			
 			await anim2.add(objects.tutorial_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
 			tutorial.activate();
 			//ждем нажатия кнопки			
 			await new Promise(res=>{this.action_resolver=res})
 			anim2.add(objects.tutorial_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
-		//}
+		}
 		
 		
 		hints.activate(this);
