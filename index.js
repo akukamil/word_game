@@ -4056,9 +4056,7 @@ main_loader={
 		
 		//подпапка с ресурсами
 		const lang_pack = ['RUS','ENG'][LANG];	
-					
-		
-		
+						
 		game_res.add('word_open',git_src+'sounds/word_open.mp3');
 		game_res.add('word_open0',git_src+'sounds/word_open0.mp3');
 		game_res.add('word_opened',git_src+'sounds/word_opened.mp3');
@@ -4343,6 +4341,9 @@ async function init_game_env(lang) {
 				
 	git_src="https://akukamil.github.io/word_game/"
 	git_src=""
+	
+	
+	document.body.style.backgroundImage = "url('res/common/bcg.jpg')";
 				
 	document.body.style.webkitTouchCallout = "none";
 	document.body.style.webkitUserSelect = "none";
