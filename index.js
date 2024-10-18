@@ -4505,6 +4505,12 @@ async function init_game_env(lang) {
 	fbs.ref('players/'+my_data.uid+'/PUB/pic_url').set(my_data.pic_url);				
 	fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
 	fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(game.hints_num);
+	fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
+	
+	//отметка о присутствии
+	setInterval(function()	{
+		fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
+	}, 40000);
 
 	//время первого захода в игру
 	if(!other_data?.PRV?.first_log_tm){
@@ -4533,7 +4539,7 @@ async function init_game_env(lang) {
 	document.addEventListener('visibilitychange', vis_change);
 		
 	//проверяем и включаем музыку
-	//music.activate();
+	music.activate();
 		
 	//показыаем основное меню
 	main_menu.activate();
