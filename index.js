@@ -3223,9 +3223,8 @@ game={
 	shuffle(){
 		
 		if (anim2.any_on()||anim3.any_on()) return;		
-		if (!this.game_active) return;	
-		
-		
+		if (!this.on&&!quiz1.on) return;	
+				
 		//располагаем кнопки-буквы
 		const angle_step=Math.PI*2/this.letters_num;
 		const start_angle=Math.PI*2*Math.random();
@@ -3653,7 +3652,7 @@ quiz1={
 		await new Promise(resolve=> {setTimeout(resolve, 1000);});
 		objects.t_winner_rating.text=winner_rating+this.cur_bonus;
 		if (winner_uid===my_data.uid){
-			my_data.rating=winner_rating+this.cur_bonus;
+			my_data.rating+=this.cur_bonus;
 			fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);			
 		}
 		
@@ -4178,9 +4177,7 @@ lb={
 		
 		//берем из кэша
 		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
-		
-		
-			
+					
 		//загружаем из файербейса если надо
 		if (Date.now()-this.last_update>120000 || !leaders_data){			
 			const fbs_source={'online_game':'PUB/rating','sp_game':'PRV/level_index'}[game_type];
@@ -4191,9 +4188,7 @@ lb={
 			else
 				this.sp_game_data=leaders_data;
 			this.last_update=Date.now();
-		}	
-		
-			
+		}				
 
 		const top={
 			0:{t_name:objects.lb_1_name,t_rating:objects.lb_1_rating,avatar:objects.lb_1_avatar},
