@@ -2291,6 +2291,93 @@ auth2 = {
 	}
 }
 
+ad = {
+	
+	prv_show : -9999,
+		
+	show() {
+		
+		if ((Date.now() - this.prv_show) < 100000 )
+			return;
+		this.prv_show = Date.now();
+		
+		if (game_platform==='YANDEX') {			
+			//показываем рекламу
+			window.ysdk.adv.showFullscreenAdv({
+			  callbacks: {
+				onClose: function() {}, 
+				onError: function() {}
+						}
+			})
+		}
+		
+		if (game_platform==='VK') {
+					 
+			vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
+			.then(function(data){})
+			.catch(function(error){})
+		}			
+		
+		if (game_platform==='CRAZYGAMES') {				
+			const callbacks = {
+				adFinished: () => console.log("End midgame ad (callback)"),
+				adError: (error) => console.log("Error midgame ad (callback)", error),
+				adStarted: () => console.log("Start midgame ad (callback)"),
+			};
+			window.CrazyGames.SDK.ad.requestAd("midgame", callbacks);	
+		}	
+		
+		if (game_platform==='GM') {
+			sdk.showBanner();
+		}
+	
+		if (game_platform==='GOOGLE_PLAY') {
+			if (typeof Android !== 'undefined') {
+				Android.showAdFromJs();
+			}			
+		}
+	
+	},
+	
+	async show2() {
+		
+		
+		if (game_platform ==="YANDEX") {
+			
+			let res = await new Promise(function(resolve, reject){				
+				window.ysdk.adv.showRewardedVideo({
+						callbacks: {
+						  onOpen: () => {},
+						  onRewarded: () => {resolve('ok')},
+						  onClose: () => {resolve('err')}, 
+						  onError: (e) => {resolve('err')}
+					}
+				})
+			
+			})
+			return res;
+		}
+		
+		if (game_platform === "VK") {	
+
+			let res = '';
+			try {
+				res = await vkBridge.send("VKWebAppShowNativeAds", { ad_format: "reward" })
+			}
+			catch(error) {
+				res ='err';
+			}
+			
+			return res;				
+			
+		}	
+		
+		return 'err';
+		
+	}
+
+}
+
 fin_level_panel={
 	
 	ok_resolver:0,
@@ -2851,7 +2938,7 @@ game={
 				//убираем буквы				
 				await this.drop_letters();	
 				await this.add_star();
-										
+																	
 								
 				//двигаем игровой контейнер и показываем объявление
 				anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
@@ -2860,6 +2947,8 @@ game={
 								
 				//ждем нажатия кнопки			
 				await new Promise(res=>{fin_level_panel.ok_resolver=res})
+				
+				ad.show();
 				
 			}		
 		}
