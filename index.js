@@ -2153,12 +2153,12 @@ auth2 = {
 		
 			function loadSDK() {
 				return new Promise((resolve, reject) => {
-					var s = d.createElement('script');
+					var s = document.createElement('script');
 					s.src = "https://sdk.games.s3.yandex.net/sdk.js";
 					s.async = true;
 					s.onload = resolve;
 					s.onerror = reject;
-					d.body.appendChild(s);
+					document.body.appendChild(s);
 				});
 			}
 
@@ -2174,8 +2174,7 @@ auth2 = {
 
 			await initSDK();
 
-
-		
+	
 		
 			//try {await this.load_script('https://yandex.ru/games/sdk/v2')} catch (e) {alert(e)};										
 					
