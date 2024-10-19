@@ -2172,7 +2172,7 @@ auth2 = {
 				my_data.yndx_auth=1;
 			}
 
-
+			window.ysdk.features.LoadingAPI?.ready()
 			
 			return;
 		}
@@ -4309,8 +4309,8 @@ async function define_platform_and_language(env) {
 function resize() {
 	
 	const BASE_RATIO=M_WIDTH/M_HEIGHT;
-    let vpw = window.innerWidth;  // Width of the viewport
-    let vph = window.innerHeight; // Height of the viewport
+    let vpw = document.body.clientWidth;  // Width of the viewport
+    let vph = document.body.clientHeight; // Height of the viewport
 	const new_ratio=vpw/vph/BASE_RATIO;
 	const max_ratio=1;
 	const min_ratio=1
