@@ -2150,7 +2150,34 @@ auth2 = {
 				
 		if (game_platform === 'YANDEX') {			
 		
-			try {await this.load_script('https://yandex.ru/games/sdk/v2')} catch (e) {alert(e)};										
+		
+			function loadSDK() {
+				return new Promise((resolve, reject) => {
+					var s = d.createElement('script');
+					s.src = "https://sdk.games.s3.yandex.net/sdk.js";
+					s.async = true;
+					s.onload = resolve;
+					s.onerror = reject;
+					d.body.appendChild(s);
+				});
+			}
+
+			async function initSDK() {
+				try {
+					await loadSDK();
+					// Your SDK initialization code here
+					console.log("SDK loaded successfully");
+				} catch (error) {
+					console.error("Failed to load SDK:", error);
+				}
+			}
+
+			await initSDK();
+
+
+		
+		
+			//try {await this.load_script('https://yandex.ru/games/sdk/v2')} catch (e) {alert(e)};										
 					
 			let _player;
 			
