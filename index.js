@@ -3617,7 +3617,7 @@ quiz1={
 				free_icon.avatar.set_texture(players_cache.players[uid].texture);
 				free_icon.place=num_of_icons;
 				if (uid===my_data.uid)
-					free_icon.t_name.tint=0xff3333;
+					free_icon.t_name.tint=0x0033ff;
 				else
 					free_icon.t_name.tint=0xffffff;
 			}			
