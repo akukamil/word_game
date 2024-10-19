@@ -2339,6 +2339,16 @@ ad = {
 	
 	},
 	
+	async show_vk_banner(){
+				
+		const cur_tm=Date.now();
+		if(cur_tm-this.prv_banner_show<200000) return;		
+		this.prv_banner_show=cur_tm;		
+		const data=await vkBridge.send('VKWebAppShowBannerAd', {banner_location: 'bottom',layout_type:'resize'});
+		if(data.result&&my_turn) this.hide_vk_banner();		
+	},
+	
+	
 	async show2() {
 		
 		
@@ -3102,6 +3112,9 @@ game={
 			
 	prepare_words2(cw_data){
 		
+		
+		if (game_platform==='VK')
+			ad.show_vk_banner();
 				
 		//сначала убираем все слова
 		objects.letters_objects.forEach(l=>l.visible=false);
