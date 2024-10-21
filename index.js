@@ -4407,6 +4407,7 @@ vk={
 			if (data.success && my_data.vk_invite<3) {
 				this.show_bonus_info();
 				fbs.ref('players/'+my_data.uid+'/PRV/vk_invite').transaction(val=> {return (val || 0) + 1});
+				my_data.vk_invite=my_data.vk_invite?my_data.vk_invite+1:1;
 			}
 		})		
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
@@ -4423,6 +4424,7 @@ vk={
 			if (data.post_id && my_data.vk_share<3) {
 				this.show_bonus_info();
 				fbs.ref('players/'+my_data.uid+'/PRV/vk_share').transaction(val=> {return (val || 0) + 1});
+				my_data.vk_share=my_data.vk_share?my_data.vk_share+1:1;
 			}
 		})
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
