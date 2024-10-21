@@ -4407,7 +4407,7 @@ vk={
 			if (data.success) {
 			  // Запись размещена
 				game.hints_num+=10;
-				quiz.hints_num+=10;
+				quiz1.hints_num+=10;
 				console.log('Приглашения не отправлены', data.notSentIds);
 			}
 		})
@@ -4426,7 +4426,7 @@ vk={
 			if (data.post_id) {
 			  // Запись размещена
 			  game.hints_num+=10;
-			  quiz.hints_num+=10;
+			  quiz1.hints_num+=10;
 			}
 		})
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
