@@ -4404,14 +4404,11 @@ vk={
 		
 		sound.play('click');
 		vkBridge.send('VKWebAppShowInviteBox').then( (data) => {
-			if (data.success) {
-			  // Запись размещена
-				game.hints_num+=10;
-				quiz1.hints_num+=10;
-				console.log('Приглашения не отправлены', data.notSentIds);
+			if (data.success && my_data.vk_invite<3) {
+				this.show_bonus_info();
+				fbs.ref('players/'+my_data.uid+'/vk_invite').transaction(val=> {return (val || 0) + 1});
 			}
-		})
-		
+		})		
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
 		
 	},
@@ -4423,13 +4420,28 @@ vk={
 		
 		sound.play('click');
 		vkBridge.send('VKWebAppShowWallPostBox', { message: 'Я играю в Буквоед Онлайн и мне нравится!','attachments': 'https://vk.com/app52512790'}).then(data=>{ 
-			if (data.post_id) {
-			  // Запись размещена
-			  game.hints_num+=10;
-			  quiz1.hints_num+=10;
+			if (data.post_id && my_data.vk_share<3) {
+				this.show_bonus_info();
+				fbs.ref('players/'+my_data.uid+'/vk_share').transaction(val=> {return (val || 0) + 1});
 			}
 		})
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
+		
+	},
+	
+	show_bonus_info(){
+		
+		game.hints_num+=10;
+		quiz1.hints_num+=10;
+		sound.play('hint');
+		anim3.add(objects.vk_bonus,{scale_xy:[0.1,0.666,'easeOutBack'],alpha:[0,1,'linear']}, true, 0.4);
+		
+	},
+	
+	bonus_ok_down(){
+		if (anim2.any_on()||anim3.any_on()) return;	
+		sound.play('click');
+		anim3.add(objects.vk_bonus,{scale_xy:[0.666,0.1,'easeInBack'],alpha:[1,0,'linear']}, false, 0.4);
 		
 	}
 	
@@ -4691,7 +4703,8 @@ async function init_game_env(lang) {
 	my_data.name=other_data?.PUB?.name || my_data.name;
 	game.hints_num=other_data?.PRV?.hints_num || 0;
 	my_data.rating = other_data?.PUB?.rating || 0;
-
+	my_data.vk_share = other_data?.PRV?.vk_share || 0;
+	my_data.vk_invite = other_data?.PRV?.vk_invite || 0;
 	//записываем данные в файрбейс для актуализации
 	fbs.ref('players/'+my_data.uid+'/PUB/name').set(my_data.name);
 	fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);
@@ -4699,6 +4712,7 @@ async function init_game_env(lang) {
 	fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
 	fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(game.hints_num);
 	fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
+	
 	
 	//отметка о присутствии
 	setInterval(function()	{
