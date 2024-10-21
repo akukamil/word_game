@@ -4406,7 +4406,7 @@ vk={
 		vkBridge.send('VKWebAppShowInviteBox').then( (data) => {
 			if (data.success && my_data.vk_invite<3) {
 				this.show_bonus_info();
-				fbs.ref('players/'+my_data.uid+'/vk_invite').transaction(val=> {return (val || 0) + 1});
+				fbs.ref('players/'+my_data.uid+'/PRV/vk_invite').transaction(val=> {return (val || 0) + 1});
 			}
 		})		
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
@@ -4422,7 +4422,7 @@ vk={
 		vkBridge.send('VKWebAppShowWallPostBox', { message: 'Я играю в Буквоед Онлайн и мне нравится!','attachments': 'https://vk.com/app52512790'}).then(data=>{ 
 			if (data.post_id && my_data.vk_share<3) {
 				this.show_bonus_info();
-				fbs.ref('players/'+my_data.uid+'/vk_share').transaction(val=> {return (val || 0) + 1});
+				fbs.ref('players/'+my_data.uid+'/PRV/vk_share').transaction(val=> {return (val || 0) + 1});
 			}
 		})
 		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
