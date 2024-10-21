@@ -4031,6 +4031,10 @@ main_menu={
 		anim_obj1.y=250;
 		anim2.add(anim_obj1,{scale_xy:[0.8,1.5],alpha:[0.5,0],angle:[0,10]},false,2,'linear',false);
 		
+		//кнопки вконтакте
+		if (game_platform==='VK')
+			objects.vk_buttons_cont.visible=true;
+		
 		
 	},
 
@@ -4390,6 +4394,46 @@ lb={
 	
 	}
 
+}
+
+vk={
+	
+	invite_button_down(){
+		if (anim2.any_on())
+			return;
+		
+		sound.play('click');
+		vkBridge.send('VKWebAppShowInviteBox').then( (data) => {
+			if (data.success) {
+			  // Запись размещена
+				game.hints_num+=10;
+				quiz.hints_num+=10;
+				console.log('Приглашения не отправлены', data.notSentIds);
+			}
+		})
+		
+		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
+		
+	},
+	
+	share_button_down(){
+		
+		if (anim2.any_on())
+			return;
+		
+		sound.play('click');
+		vkBridge.send('VKWebAppShowWallPostBox', { message: 'Я играю в Буквоед Онлайн и мне нравится!','attachments': 'https://vk.com/app52512790'}).then(data=>{ 
+			if (data.post_id) {
+			  // Запись размещена
+			  game.hints_num+=10;
+			  quiz.hints_num+=10;
+			}
+		})
+		anim2.add(objects.vk_buttons_cont,{y:[objects.vk_buttons_cont.y,900]}, false, 0.75,'linear');	
+		
+	}
+	
+	
 }
 
 async function define_platform_and_language(env) {
