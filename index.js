@@ -3783,7 +3783,8 @@ quiz1={
 		
 		objects.winner_avatar.set_texture(winner_data.texture)
 		objects.t_winner_name.text=winner_data.name;
-				
+		objects.t_winner_rating.text=winner_rating;
+		
 		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
 		sound.play('winner');
 			
