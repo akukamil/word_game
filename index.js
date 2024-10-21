@@ -1426,12 +1426,25 @@ class player_icon_class extends PIXI.Container{
 		this.t_name.anchor.set(0.5,0.5);	
 		this.t_name.tint=0xffffff;
 		
+		this.hl=new PIXI.Sprite(gres.white_orb_img.texture);
+		this.hl.x=40;	
+		this.hl.y=40;	
+		this.hl.anchor.set(0.5,0.5);
+		this.hl.visible=false;
+		
 		this.scale_xy=0.88;
 		this.visible=false;
 		
-		this.addChild(this.bcg,this.avatar,this.avatar_frame,this.solved_bcg,this.t_solved,this.t_name);
+		this.addChild(this.bcg,this.avatar,this.avatar_frame,this.solved_bcg,this.t_solved,this.t_name,this.hl);
 		
 	}	
+	
+	make_progress_hl(){
+		
+		//показываем вспышку
+		anim3.add(this.hl,{alpha:[1,0,'linear'],scale_xy:[0.9,1.2,'easeOutBack'],angle:[0,40,'linear']}, false, 2);
+		
+	}
 	
 }
 
@@ -3695,9 +3708,12 @@ quiz1={
 		if (event.event==='PROGRESS'){
 			const player_icon=objects.players_icons.find(i=>i.uid===event.uid)
 			//console.log(event);		
+			
 			if (player_icon){
+				sound.play('progress');
 				player_icon.solved_num=event.solved_num;
 				player_icon.t_solved.text=event.solved_num;
+				player_icon.make_progress_hl();
 				this.update_icons();
 			}
 		}
@@ -4213,6 +4229,7 @@ main_loader={
 		game_res.add('star_added',git_src+'sounds/star_added.mp3');
 		game_res.add('tile_open',git_src+'sounds/tile_open.mp3');
 		game_res.add('click',git_src+'sounds/click.mp3');
+		game_res.add('progress',git_src+'sounds/progress.mp3');
 		
 		//добавляем из листа загрузки
 		for (var i = 0; i < load_list.length; i++)
