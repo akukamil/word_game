@@ -2358,7 +2358,7 @@ ad = {
 		if(cur_tm-this.prv_banner_show<200000) return;		
 		this.prv_banner_show=cur_tm;		
 		const data=await vkBridge.send('VKWebAppShowBannerAd', {banner_location: 'bottom',layout_type:'resize'});
-		if(data.result&&my_turn) this.hide_vk_banner();		
+		//if(data.result&&my_turn) this.hide_vk_banner();		
 	},
 	
 	
