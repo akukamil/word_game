@@ -4732,8 +4732,7 @@ async function init_game_env(lang) {
 	//устанавливаем фотки в попап
 	const my_texture=await my_texture_from(my_data.pic_url);
 	objects.id_avatar.set_texture(my_texture);
-	objects.id_name.set2(my_data.name,150);	
-	objects.id_rating.text=my_data.rating;
+	objects.id_name.text=my_data.name;	
 					
 	//преобразовываем индекс в номер мира и уровень
 	[w,l]=game.get_world_and_level(my_data.level_index);
