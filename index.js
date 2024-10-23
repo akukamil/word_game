@@ -3670,7 +3670,10 @@ quiz1={
 		console.log(event);
 		
 		if (event.event==='NEW_CW'){
-			//console.log(event);			
+			//console.log(event);		
+			//определяем бонус
+			this.cur_bonus=event.num_of_players*2;
+			
 			this.start_game(event.quiz_data);
 		}
 				
@@ -3787,7 +3790,7 @@ quiz1={
 		
 		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
 		sound.play('winner');
-			
+		
 		//вспышка
 		let anim_obj=objects.anim_objects.find(o=>!o.visible);
 		if (anim_obj){
@@ -4715,7 +4718,7 @@ async function init_game_env(lang) {
 	fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
 	fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(game.hints_num);
 	fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
-	
+	fbs.ref('players/'+my_data.uid+'/PRV/source').set(window.location.href.replaceAll('/','_'));
 	
 	//отметка о присутствии
 	setInterval(function()	{
