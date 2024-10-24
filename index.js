@@ -3373,8 +3373,8 @@ game={
 		for (let i=0;i<this.letters_num;i++){
 			const index=shuffled_letters[i];
 			const letter=objects.letter_buttons[index];
-			const tx=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*100;
-			const ty=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*100;
+			const tx=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*110;
+			const ty=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*110;
 			const cur_ang=letter.angle;
 			const tar_ang=irnd(-10,10);
 			anim2.add(letter,{x:[letter.x,tx],y:[letter.y,ty],angle:[cur_ang,tar_ang]}, true, 0.25,'easeInOutCubic');
