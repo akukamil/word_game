@@ -3701,7 +3701,8 @@ quiz1={
 					icon.t_solved.text=0;
 				}				
 			})	
-
+			
+			objects.t_players_online.text=`Игроков онлайн: ${event.num_of_players}`;
 			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);	
 			
 			
