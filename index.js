@@ -4074,6 +4074,7 @@ quiz2={
 		if (event.event==='NEW_CW'){
 			//console.log(event);		
 			//определяем бонус
+			this.reset();
 			this.cur_bonus=event.num_of_players*2;							
 			this.start_game(event.quiz_data);
 		}
@@ -4107,7 +4108,7 @@ quiz2={
 			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);	
 			
 			
-			
+			this.reset();
 			
 			quiz1.update_icons();			
 		}
@@ -4129,10 +4130,7 @@ quiz2={
 			this.game_end(event.uid);
 		}
 		
-		if (event.event==='TIME'){			
-			this.update_timer(event.time);
-		}
-	
+
 	},
 	
 	update_timer(time){
@@ -4335,7 +4333,7 @@ quiz2={
 			fly_letter.x=sx;
 			fly_letter.scale_xy=letter_button.scale_xy;
 					
-			anim2.add(fly_letter,{y:[sy,300],alpha:[1,0],angle:[s_angle,irnd(-20,20)]}, false, 0.5,'linear');
+			anim2.add(fly_letter,{y:[sy,280],alpha:[1,0],angle:[s_angle,irnd(-20,20)]}, false, 0.5,'linear');
 			
 		}
 		
@@ -4807,7 +4805,7 @@ lb={
 
 	async update(game_type) {
 			
-		
+		objects.loading_info.visible=true;
 		//берем из кэша
 		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
 					
@@ -4853,6 +4851,8 @@ lb={
 			await players_cache.update(uid,leader_params);			
 		}
 		
+		
+		objects.loading_info.visible=false;
 		//сортируем....
 		leaders_array.sort(function(a,b) {return b.rating - a.rating});
 				
