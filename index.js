@@ -2838,10 +2838,17 @@ game={
 		my_data.world=w;
 		my_data.level=l;
 		
+		//переназначаем кнопку шафл
+		objects.shuffle.pointerdown=function(){game.shuffle()};
+		objects.exit_btn.pointerdown=function(){game.exit_btn_down()};
+		
 		objects.letters_area_bcg.pointermove=game.area_move.bind(game);
 		objects.letters_area_bcg.pointerup=game.area_up.bind(game);
 		objects.letters_area_bcg.pointerdown=game.area_down.bind(game);
 		objects.exit_btn.pointerdown=function(){game.exit_btn_down()};
+		
+		//переназначаем кнопку шафл
+		objects.shuffle.pointerdown=function(){game.shuffle()};
 		
 		//меняем дизайн
 		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
@@ -3555,9 +3562,7 @@ quiz1={
 	action_resolver:()=>{},
 	
 	async activate(){		
-		
-		
-		
+				
 		//если это первый раз в игре
 		if (my_data.first_log){
 			objects.tutorial_info.text='Соединяй буквы и составляй слова отгадывая кроссворд. Первый игрок отгадавший все слова в кроссворде получает бонус!';			
@@ -3568,6 +3573,9 @@ quiz1={
 			anim2.add(objects.tutorial_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
 		}
 		
+		//переназначаем кнопку шафл
+		objects.shuffle.pointerdown=function(){game.shuffle()};
+		objects.exit_btn.pointerdown=function(){game.exit_btn_down()};
 		
 		hints.activate(this);
 		
@@ -3589,8 +3597,10 @@ quiz1={
 		
 		//загружаем игроков
 		console.log('загружаем комнату...')
+		objects.loading_info.visible=true;
 		const players=await fbs_once('room1/players');
 		await this.update_players(players);
+		objects.loading_info.visible=false;
 		console.log('загружено!')
 		
 		//подписываемся на изменения игроков
@@ -3626,7 +3636,8 @@ quiz1={
 				free_icon.visible=true;
 				free_icon.uid=uid;
 				free_icon.t_solved.text=0;
-				free_icon.t_name.set2(players_cache.players[uid].name,75);
+				const pname=players_cache.players[uid].name.split(' ')[0];
+				free_icon.t_name.set2(pname,75);
 				free_icon.avatar.set_texture(players_cache.players[uid].texture);
 				free_icon.place=num_of_icons;
 				if (uid===my_data.uid)
@@ -3655,16 +3666,7 @@ quiz1={
 		fbs.ref('room1/players/'+my_data.uid).set(firebase.database.ServerValue.TIMESTAMP);
 		
 	},
-		
-	add_letter(letter_text){
-		
-		objects.typing_word.text+=letter_text;
-		objects.typing_word_bcg.width=objects.typing_word.width+40;
-		objects.typing_word_bcg.pivot.x=objects.typing_word_bcg.width*0.5;
-		objects.typing_word_bcg.visible=true;
-		
-	},
-			
+					
 	game_events(event){
 		
 		console.log(event);
@@ -3978,6 +3980,479 @@ quiz1={
 	}
 	
 	
+}
+
+quiz2={
+	
+	word:'АКАРОЛОГИЯ',
+	added_words:[],
+	keep_alive_timer:0,
+	start_time:0,
+	on:0,
+	
+	async activate(){
+		
+		//меняем дизайн
+		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
+			objects.bcg.texture=gres.main_bcg2.texture;
+			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
+		});
+		
+		this.on=1;
+
+		//переназначаем кнопку шафл
+		objects.shuffle.pointerdown=function(){quiz2.reset()};
+		objects.exit_btn.pointerdown=function(){quiz2.exit_btn_down()};
+		
+		//кнопка проверки слова
+		objects.check_word_btn.visible=true;
+		objects.hint_button_cont.visible=false;
+		objects.t_quiz2_info.visible=true;
+		objects.t_quiz2_info.text='';
+		
+		objects.t_q2_words.visible=true;
+		objects.t_q2_words.text='';
+		
+		this.keep_alive_timer=setInterval(function(){quiz2.keep_alive()},45000);
+		quiz2.keep_alive();
+		anim2.add(objects.players_icons_cont,{y:[-200,0]}, true, 0.4,'linear');
+		
+		objects.letter_buttons.forEach(l=>{l.bcg.texture=gres.big_letter2_bcg.texture;l.visible=false;l.interactive=true;l.pointerdown=this.letter_down});
+		objects.game_cont.visible=true;
+		objects.crossword_cont.visible=false;
+		objects.letters_area_bcg.visible=false;
+		
+		//загружаем игроков
+		console.log('загружаем комнату...')
+		objects.loading_info.visible=true;
+		const players=await fbs_once('room2/players');
+		await this.update_players(players);
+		objects.loading_info.visible=false;
+		console.log('загружено!')
+		
+
+		
+		
+		
+		
+		this.show_letters();
+		
+		
+		//подписываемся на изменения игроков
+		fbs.ref('room2/players').on('value',function(data){			
+			quiz1.update_players(data.val())
+		})		
+	
+		//подписываемся на события комнаты
+		fbs.ref('room2/events').on('value',function(data){			
+			quiz2.game_events(data.val())
+		})		
+		
+		//подписываемся на новый кроссворд
+		fbs.ref('room2/new_cw').on('value',function(data){			
+			quiz2.game_events(data.val())
+		})	
+		
+		
+	},
+	
+	process(){
+		
+		const tm=Date.now();
+		let sec_left=(100-(tm-this.start_time)*0.001)/100;
+		sec_left=Math.min(sec_left,1);
+		sec_left=Math.max(sec_left,0);
+		objects.q2_timer_bar.width=400*sec_left;
+		objects.t_q2_time.text=Math.floor(sec_left*100);
+		
+	},
+	
+	game_events(event){
+		
+		console.log(event);
+		
+		if (event.event==='NEW_CW'){
+			//console.log(event);		
+			//определяем бонус
+			this.cur_bonus=event.num_of_players*2;							
+			this.start_game(event.quiz_data);
+		}
+				
+		if (!this.init_skipped){
+			this.init_skipped=1;
+			return;
+		}
+		
+		if (event.event==='PREPARE'){
+			
+			
+			//определяем бонус
+			this.cur_bonus=event.num_of_players*2;
+			objects.t_ready_bonus.text=this.cur_bonus;
+			sound.play('get_ready');
+			
+			if (objects.winner_cont.visible){
+				anim3.add(objects.winner_cont,{alpha:[1,0.2,'linear'],scale_xy:[1,0.2,'easeInBack'],angle:[0,-700,'easeInBack']}, false, 0.75);
+			}
+
+		
+			objects.players_icons.forEach(icon=>{			
+				if (icon.visible){
+					icon.solved_num=0;
+					icon.t_solved.text=0;
+				}				
+			})	
+			
+			objects.t_players_online.text=`Игроков онлайн: ${event.num_of_players}`;
+			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);	
+			
+			
+			
+			
+			quiz1.update_icons();			
+		}
+		
+		if (event.event==='PROGRESS'){
+			const player_icon=objects.players_icons.find(i=>i.uid===event.uid)
+			//console.log(event);		
+			
+			if (player_icon){
+				sound.play('progress');
+				player_icon.solved_num=event.solved_num;
+				player_icon.t_solved.text=event.solved_num;
+				player_icon.make_progress_hl();
+				quiz1.update_icons();
+			}
+		}
+		
+		if (event.event==='WINNER'){			
+			this.game_end(event.uid);
+		}
+		
+		if (event.event==='TIME'){			
+			this.update_timer(event.time);
+		}
+	
+	},
+	
+	update_timer(time){
+		
+		
+		
+	},
+	
+	start_game(word){
+		
+		objects.winner_cont.visible=false;
+		objects.shuffle.visible=true;
+		if (objects.ready_cont.visible)
+			anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
+								
+		//двигаем и показываем игровое поле
+		objects.q2_timer_cont.visible=true
+		anim2.add(objects.game_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
+		objects.players_icons.forEach(i=>i.solved_num=0);
+		
+		some_process.q2=function(){quiz2.process()};
+		objects.t_q2_words.text='';
+		
+		this.start_time=Date.now();
+		this.added_words=[];
+		this.word=word;
+		this.show_letters();	
+		
+	},
+	
+	async game_end(winner_uid){
+		
+		await this.drop_letters();
+		//objects.shuffle.visible=false;
+		//objects.hint_button_cont.visible=false;
+		some_process.q2=function(){};
+		
+		anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.4,'linear');
+		
+		if (winner_uid==='NO_WINNER') return;
+		
+		const start_tm=Date.now();
+		const winner_rating=await fbs_once('players/'+winner_uid+'/PUB/rating');
+		const winner_data=players_cache.players[winner_uid];
+		const db_tm=Date.now()-start_tm;
+		const wait_tm=Math.max(2,1000-db_tm);
+		
+		await new Promise(resolve=> {setTimeout(resolve, wait_tm);});		
+		
+		objects.winner_avatar.set_texture(winner_data.texture)
+		objects.t_winner_name.text=winner_data.name;
+		objects.t_winner_rating.text=winner_rating;
+		
+		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
+		sound.play('winner');
+		
+		//вспышка
+		let anim_obj=objects.anim_objects.find(o=>!o.visible);
+		if (anim_obj){
+			anim_obj.x=M_WIDTH*0.5;
+			anim_obj.y=M_HEIGHT*0.5;
+			anim_obj.texture=gres.stars_net_img.texture;
+			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');				
+		}
+		
+		//обновляем рейтинг на карточке
+		await new Promise(resolve=> {setTimeout(resolve, 1000);});
+		objects.t_winner_rating.text=winner_rating+this.cur_bonus;
+		if (winner_uid===my_data.uid){
+			my_data.rating+=this.cur_bonus;
+			fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);			
+		}
+		
+		anim2.add(objects.t_winner_rating,{scale_xy:[1,1.5]}, true, 1.5,'ease2back');		
+		
+		//вспышка
+		anim_obj=objects.anim_objects.find(o=>!o.visible);
+		if (anim_obj){
+			anim_obj.x=220;
+			anim_obj.y=490;
+			anim_obj.texture=gres.white_orb_img.texture;
+			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');				
+		}		
+		
+	},
+	
+	async drop_letters(){
+		
+		
+		for (let i=0;i<10;i++){
+			const letter=objects.letter_buttons[i];
+			const anim_object=objects.anim_objects.find(o=>o.visible===false);
+			letter.visible=false;
+			if (anim_object){
+				anim_object.texture=gres.bubbles_img.texture;
+				anim_object.x=letter.x;
+				anim_object.y=letter.y;
+				sound.play('bubble');
+				await anim2.add(anim_object,{scale_xy:[0.166, 0.8],alpha:[0.9,0]}, false, 0.15,'linear');	
+			}
+			//anim2.add(letter,{y:[letter.y,800]}, false, 0.5,'easeInBack');	
+			//anim2.add(objects.anim_frame3,{scale_xy:[0.666, 1],alpha:[0.9,0]}, false, 3,'linear');	
+
+		}
+		
+	},
+	
+	reset(){
+		
+		
+		objects.typing_word.text='';
+		objects.typing_word_bcg.visible=false;
+		objects.letter_buttons.forEach(l=>{l.checked=0;l.bcg.tint=0xffffff;l.hl.visible=false});
+		game.letters_seq=[];
+		
+	},
+	
+	letter_down(e){
+		
+		if (this.checked){
+			sound.play('locked');
+			anim2.add(this,{x:[this.x,this.x+5]}, true, 0.15,'shake');
+			return;
+		}
+		
+		if (objects.typing_word.text.length===6){			
+			objects.t_quiz2_info.text='Не более 6 букв!';
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			sound.play('locked');
+			return;
+		}
+		
+				
+		sound.play('button'+objects.typing_word.text.length);		
+		anim3.add(this,{scale_xy:[0.6,0.8,'ease2back']}, true, 0.15);
+		
+		this.hl.visible=true;
+		console.log(this.letter_text);
+		game.add_letter(this.letter_text);
+		this.bcg.tint=0xff00ff;
+		game.letters_seq.push(this);
+		this.checked=1;
+		
+	},
+	
+	async update_players(uid_data){
+					
+		//обновляем данные об игроках
+		for (let uid in uid_data){
+			await players_cache.update(uid);
+			
+			const active_icon=objects.players_icons.find(i=>{return i.visible&&i.uid===uid});
+			
+			if (!active_icon){
+				const num_of_icons=objects.players_icons.filter(i=>i.visible).length;
+				const free_icon=objects.players_icons.find(i=>i.visible===false);
+				free_icon.x=6.667+num_of_icons*86.667;
+				free_icon.visible=true;
+				free_icon.uid=uid;
+				free_icon.t_solved.text=0;
+				free_icon.t_name.set2(players_cache.players[uid].name,75);
+				free_icon.avatar.set_texture(players_cache.players[uid].texture);
+				free_icon.place=num_of_icons;
+				if (uid===my_data.uid)
+					free_icon.t_name.tint=0x0033ff;
+				else
+					free_icon.t_name.tint=0xffffff;
+			}			
+		}
+		
+		//убираем пропавших
+		objects.players_icons.forEach(icon=>{			
+			if (icon.visible){
+				if (!uid_data[icon.uid])				
+					icon.visible=false;
+			}				
+		})
+		
+		quiz1.update_icons();			
+		
+		
+	},
+	
+	good_word_found(){
+		
+		
+		objects.t_q2_words.text=objects.t_q2_words.text+objects.typing_word.text+' ';
+		
+		//буквы летят на места
+		for (let i=0;i<game.letters_seq.length;i++){
+			
+			const letter_button=game.letters_seq[i];			
+			const fly_letter=objects.fly_letters[i];			
+			
+			const sx=letter_button.x;
+			const sy=letter_button.y;
+			const s_angle=letter_button.angle;
+			fly_letter.set_letter(letter_button.letter_text);
+			
+			fly_letter.x=sx;
+			fly_letter.scale_xy=letter_button.scale_xy;
+					
+			anim2.add(fly_letter,{y:[sy,300],alpha:[1,0],angle:[s_angle,irnd(-20,20)]}, false, 0.5,'linear');
+			
+		}
+		
+		sound.play('word_open0');
+				
+	},
+	
+	show_letters() {			
+		
+		//скрвываем сначала все буквы
+		objects.letter_buttons.forEach(l=>l.visible=false);
+		
+		const WORDS_NUM=5;
+		const SIDE_MARGIN=50;
+		const L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/WORDS_NUM;
+		
+		
+		//располагаем кнопки-буквы
+		for (let i=0;i<this.word.length;i++){
+			const letter_object=objects.letter_buttons[i];
+			letter_object.visible=true;
+			
+			const tar_y=i>4?623:557;
+			const cur_i=i>4?i-5:i;
+			const tar_x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*cur_i;
+		
+			letter_object.set_letter(this.word[i]);
+			letter_object.scale_xy=0.6;
+			letter_object.angle=irnd(-2,2);
+			letter_object.bcg.tint=0xffffff;
+			letter_object.checked=0;
+		
+			anim2.add(letter_object,{y:[800,tar_y],x:[0,tar_x]}, true, 0.5,'easeOutBack');	
+		}	
+
+		sound.play('start_level')
+
+		//подчищаем что могло остаться
+		objects.letters_area_bcg.interactive=true;		
+		objects.letter_connect_graph.clear();
+		objects.letter_buttons.forEach(l=>{l.checked=0;l.hl.visible=false});
+		
+	},
+	
+	check_word(){	
+				
+		if (!all_words[objects.typing_word.text]){
+			objects.t_quiz2_info.text='Такого слова нет в словаре!';
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			sound.play('locked');
+			this.reset();
+			return;
+		}
+				
+		if (this.added_words.includes(objects.typing_word.text)){
+			objects.t_quiz2_info.text='Такое слово уже называли!';
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			sound.play('locked');
+			this.reset();
+			return;
+		}
+			
+			
+		this.added_words.push(objects.typing_word.text);
+		this.good_word_found();
+		const w_len=objects.typing_word.text.length-2;
+		fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:w_len,tm:Date.now()});	
+		
+		this.reset();
+		
+	},
+	
+	exit_btn_down(){
+		if (anim2.any_on()||anim3.any_on()) return;		
+		
+		sound.play('click');
+		this.close();
+		main_menu.activate();
+		
+	},
+	
+	close(){
+		
+		this.on=0;
+
+		
+		//отключаем файербейс
+		fbs.ref('room2/players').off()		
+		fbs.ref('room2/events').off()		
+		fbs.ref('room2/new_cw').off()		
+		fbs.ref('room2/players/'+my_data.uid).remove()		
+		
+		objects.q2_timer_cont.visible=false;		
+		
+		some_process.q2=function(){};
+		
+		
+		objects.letter_buttons.forEach(l=>{l.interactive=false});
+		
+		objects.crossword_cont.visible=true;
+		objects.letters_area_bcg.visible=true;
+		objects.check_word_btn.visible=false;
+		objects.ready_cont.visible=false;		
+		objects.winner_cont.visible=false;
+		anim2.add(objects.players_icons_cont,{y:[0,-200]}, false, 0.4,'linear');
+		anim2.add(objects.game_cont,{alpha:[1,0],x:[0,-440]}, false, 0.4,'linear');
+		clearInterval(this.keep_alive_timer);
+		
+	},
+	
+	keep_alive(){
+		
+		//загружаем мои данные в комнату
+		fbs.ref('room2/players/'+my_data.uid).set(firebase.database.ServerValue.TIMESTAMP);
+		
+	},
+		
 }
 
 rules={	
@@ -4539,6 +5014,14 @@ function vis_change() {
 
 	if (document.hidden === true) {	
 		PIXI.sound.volumeAll=0;	
+		if (quiz1.on){
+			quiz1.close();
+			main_menu.activate();
+		}
+		if (quiz2.on){
+			quiz2.close();
+			main_menu.activate();
+		}
 	} else {
 		PIXI.sound.volumeAll=1;	
 	}				
