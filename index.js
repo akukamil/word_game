@@ -3681,7 +3681,7 @@ quiz1={
 					
 	game_events(event){
 		
-		console.log(event);
+		//console.log(event);
 		
 		if (event.event==='NEW_CW'){
 			//console.log(event);		
@@ -4092,7 +4092,7 @@ quiz2={
 	
 	game_events(event){
 		
-		console.log(event);
+		//console.log(event);
 		
 		if (event.event==='NEW_CW'){
 			//console.log(event);		
