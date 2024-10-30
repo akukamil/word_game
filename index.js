@@ -1442,7 +1442,7 @@ class player_icon_class extends PIXI.Container{
 	make_progress_hl(){
 		
 		//показываем вспышку
-		anim3.add(this.hl,{alpha:[1,0,'linear'],scale_xy:[0.9,1.2,'easeOutBack'],angle:[0,40,'linear']}, false, 2);
+		anim3.add(this.hl,{alpha:[1,0,'linear'],scale_xy:[0.9,1.2,'easeOutBack'],angle:[0,40,'linear']}, false, 2,false);
 		
 	}
 	
@@ -2861,6 +2861,18 @@ game={
 		game.run_world(my_data.world,my_data.level);
 		
 	},
+
+	set_loading(on){
+		
+		if (on){
+			objects.loading_cont.visible=true;
+			some_process.loading=function(d){objects.loading_circle.angle+=d*5};
+		}else{
+			objects.loading_cont.visible=false;
+			some_process.loading=function(){};
+		}		
+		
+	},
 		
 	async run_world(s_world, s_level){	
 	
@@ -3597,10 +3609,10 @@ quiz1={
 		
 		//загружаем игроков
 		console.log('загружаем комнату...')
-		objects.loading_info.visible=true;
+		game.set_loading(1);
 		const players=await fbs_once('room1/players');
 		await this.update_players(players);
-		objects.loading_info.visible=false;
+		game.set_loading(0);
 		console.log('загружено!')
 		
 		//подписываемся на изменения игроков
@@ -3841,7 +3853,7 @@ quiz1={
 			const cx=player_icon.x;
 			const tx=6.667+player_icon.place*86.667;
 			if(cx!==tx)
-				anim2.add(player_icon,{x:[cx,tx]}, true, 0.15,'linear');
+				anim2.add(player_icon,{x:[cx,tx]}, true, 0.15,'linear',false);
 		}
 		
 	},
@@ -3989,6 +4001,7 @@ quiz2={
 	keep_alive_timer:0,
 	start_time:0,
 	on:0,
+	action_resolver:0,
 	
 	async activate(){
 		
@@ -3997,6 +4010,16 @@ quiz2={
 			objects.bcg.texture=gres.main_bcg2.texture;
 			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
 		});
+		
+		
+		//если это первый раз в игре
+		//if (my_data.first_log)
+		{
+			await anim2.add(objects.q2_tutorial,{x:[M_WIDTH,0]}, true, 0.5,'linear');	
+			//ждем нажатия кнопки			
+			await new Promise(res=>{this.action_resolver=res})
+			anim2.add(objects.q2_tutorial,{x:[0,-M_WIDTH]}, false, 0.5,'linear');	
+		}
 		
 		this.on=1;
 
@@ -4024,10 +4047,10 @@ quiz2={
 		
 		//загружаем игроков
 		console.log('загружаем комнату...')
-		objects.loading_info.visible=true;
+		game.set_loading(1);
 		const players=await fbs_once('room2/players');
 		await this.update_players(players);
-		objects.loading_info.visible=false;
+		game.set_loading(0);
 		console.log('загружено!')
 		
 
@@ -4258,7 +4281,7 @@ quiz2={
 		
 		if (objects.typing_word.text.length===6){			
 			objects.t_quiz2_info.text='Не более 6 букв!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
 			sound.play('locked');
 			return;
 		}
@@ -4268,7 +4291,6 @@ quiz2={
 		anim3.add(this,{scale_xy:[0.6,0.8,'ease2back']}, true, 0.15);
 		
 		this.hl.visible=true;
-		console.log(this.letter_text);
 		game.add_letter(this.letter_text);
 		this.bcg.tint=0xff00ff;
 		game.letters_seq.push(this);
@@ -4337,6 +4359,16 @@ quiz2={
 			
 		}
 		
+		//дополнительная анимация доски - звездочки вокруг каждой буквы
+		for (let i=0;i<game.letters_seq.length;i++){
+			const letter_object=game.letters_seq[i];
+			const flash=objects.flashes.find(f=>f.visible===false);
+			flash.x=letter_object.x;
+			flash.y=letter_object.y;
+			flash.angle=irnd(0,360);
+			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear',false);				
+		}		
+		
 		sound.play('word_open0');
 				
 	},
@@ -4382,7 +4414,7 @@ quiz2={
 				
 		if (!all_words[objects.typing_word.text]){
 			objects.t_quiz2_info.text='Такого слова нет в словаре!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
 			sound.play('locked');
 			this.reset();
 			return;
@@ -4390,7 +4422,7 @@ quiz2={
 				
 		if (this.added_words.includes(objects.typing_word.text)){
 			objects.t_quiz2_info.text='Такое слово уже называли!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5);
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
 			sound.play('locked');
 			this.reset();
 			return;
@@ -4498,9 +4530,17 @@ main_menu={
 		//информация об онлайн игроках
 		fbs_once('room1/players').then(uids=>{	
 			if (uids)
-				objects.online_btn_info.text='Игроков онлайн: '+Object.keys(uids).length;		
+				objects.online_q1_info.text=Object.keys(uids).length;		
 			else
-				objects.online_btn_info.text='Игроков онлайн: 0';		
+				objects.online_q1_info.text='0';		
+		})
+		
+		//информация об онлайн игроках
+		fbs_once('room2/players').then(uids=>{	
+			if (uids)
+				objects.online_q2_info.text=Object.keys(uids).length;		
+			else
+				objects.online_q2_info.text='0';		
 		})
 		
 		const anim_obj1=objects.anim_objects.find(o=>o.visible===false);
@@ -4592,10 +4632,10 @@ main_menu={
 		
 		sound.play('click');		
 		
-		if (mx>246&&mx<316){
+		if (mx<230){
 			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=281;
-			anim_obj.y=540;
+			anim_obj.x=187;
+			anim_obj.y=539;
 			anim_obj.scale_xy=1;
 			anim_obj.angle=0;
 			anim_obj.texture=gres.quad_hl_img.texture;
@@ -4603,10 +4643,12 @@ main_menu={
 				this.close();
 				lb.activate('online_game');				
 			});		
-		}else{
+		}
+		
+		if (mx>235&&mx<315){
 			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=361;
-			anim_obj.y=540;
+			anim_obj.x=275;
+			anim_obj.y=539;
 			anim_obj.scale_xy=1;
 			anim_obj.angle=0;
 			anim_obj.texture=gres.quad_hl_img.texture;
@@ -4615,6 +4657,20 @@ main_menu={
 				quiz1.activate();			
 			});	
 		}	
+		
+		if (mx>330){
+			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
+			anim_obj.x=361;
+			anim_obj.y=539;
+			anim_obj.scale_xy=1;
+			anim_obj.angle=0;
+			anim_obj.texture=gres.quad_hl_img.texture;
+			anim2.add(anim_obj,{alpha:[1,0]}, true, 0.5,'flick').then(()=>{
+				this.close();		
+				quiz2.activate();			
+			});	
+		}	
+		
 		
 	
 	},
@@ -4805,7 +4861,7 @@ lb={
 
 	async update(game_type) {
 			
-		objects.loading_info.visible=true;
+		game.set_loading(1);
 		//берем из кэша
 		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
 					
@@ -4852,7 +4908,7 @@ lb={
 		}
 		
 		
-		objects.loading_info.visible=false;
+		game.set_loading(0);
 		//сортируем....
 		leaders_array.sort(function(a,b) {return b.rating - a.rating});
 				
