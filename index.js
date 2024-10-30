@@ -4313,7 +4313,8 @@ quiz2={
 				free_icon.visible=true;
 				free_icon.uid=uid;
 				free_icon.t_solved.text=0;
-				free_icon.t_name.set2(players_cache.players[uid].name,75);
+				const pname=players_cache.players[uid].name.split(' ')[0];
+				free_icon.t_name.set2(pname,75);
 				free_icon.avatar.set_texture(players_cache.players[uid].texture);
 				free_icon.place=num_of_icons;
 				if (uid===my_data.uid)
