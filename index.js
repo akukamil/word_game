@@ -4002,6 +4002,9 @@ quiz2={
 	start_time:0,
 	on:0,
 	action_resolver:0,
+	cur_word_progress:0,
+	word_progress_to_consume:0,
+	
 	
 	async activate(){
 		
@@ -4087,6 +4090,8 @@ quiz2={
 		sec_left=Math.max(sec_left,0);
 		objects.q2_timer_bar.width=400*sec_left;
 		objects.t_q2_time.text=Math.floor(sec_left*100);
+		
+		this.update_word_progress_bar();
 		
 	},
 	
@@ -4176,7 +4181,9 @@ quiz2={
 		
 		some_process.q2=function(){quiz2.process()};
 		objects.t_q2_words.text='';
-		
+				
+		objects.q2_word_progress_bar.width=0;		
+		this.cur_word_progress=0;
 		this.start_time=Date.now();
 		this.added_words=[];
 		this.word=word;
@@ -4382,8 +4389,7 @@ quiz2={
 		const WORDS_NUM=5;
 		const SIDE_MARGIN=50;
 		const L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/WORDS_NUM;
-		
-		
+				
 		//располагаем кнопки-буквы
 		for (let i=0;i<this.word.length;i++){
 			const letter_object=objects.letter_buttons[i];
@@ -4428,14 +4434,49 @@ quiz2={
 			this.reset();
 			return;
 		}
-			
-			
+					
+
+		//слово подходит
+					
 		this.added_words.push(objects.typing_word.text);
 		this.good_word_found();
-		const w_len=objects.typing_word.text.length-2;
-		fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:w_len,tm:Date.now()});	
+				
+		const w_len=objects.typing_word.text.length;
+		
+		this.word_progress_to_consume=w_len;		
 		
 		this.reset();
+		
+	},
+	
+	update_word_progress_bar(){
+		
+		if (this.word_progress_to_consume<=0) return;
+		
+		this.word_progress_to_consume-=0.2;		
+		this.cur_word_progress+=0.2;
+		
+		if (this.cur_word_progress>=6.99){			
+			this.cur_word_progress=0;
+			
+			//показываем вспышку
+			const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
+			anim_obj3.texture=gres.word_bonus.texture;
+			anim_obj3.x=335;
+			anim_obj3.y=345;
+			anim_obj3.angle=0;
+			anim_obj3.scale_xy=1;
+			anim3.add(anim_obj3,{alpha:[1,0.2,'linear'],scale_xy:[0.5,2,'linear'],angle:[0,10,'linear']}, false, 2);
+			fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:1,tm:Date.now()});	
+		}
+		
+		if (this.word_progress_to_consume<=0){
+			this.word_progress_to_consume=0;
+			this.cur_word_progress=Math.round(this.cur_word_progress);			
+		}
+		
+		objects.q2_word_progress_bar.width=this.cur_word_progress*165/7;
+		
 		
 	},
 	
