@@ -4442,8 +4442,12 @@ quiz2={
 		this.good_word_found();
 				
 		const w_len=objects.typing_word.text.length;
-		
-		this.word_progress_to_consume=w_len;		
+		//3 - 3
+		//4 - 4
+		//5 - 6
+		//6 - 7
+		const w_len_to_conusme={3:3,4:4,5:6,6:7};
+		this.word_progress_to_consume=w_len_to_conusme[w_len];		
 		
 		this.reset();
 		
@@ -4459,7 +4463,9 @@ quiz2={
 		if (this.cur_word_progress>=6.99){			
 			this.cur_word_progress=0;
 			
-			//показываем вспышку
+			fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:1,tm:Date.now()});		
+			
+			//показываем вспышку1
 			const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
 			anim_obj3.texture=gres.word_bonus.texture;
 			anim_obj3.x=335;
@@ -4467,7 +4473,7 @@ quiz2={
 			anim_obj3.angle=0;
 			anim_obj3.scale_xy=1;
 			anim3.add(anim_obj3,{alpha:[1,0.2,'linear'],scale_xy:[0.5,2,'linear'],angle:[0,10,'linear']}, false, 2);
-			fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:1,tm:Date.now()});	
+			
 		}
 		
 		if (this.word_progress_to_consume<=0){
