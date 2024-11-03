@@ -175,46 +175,15 @@ function all_players() {
 		//создаем массив для последующей работы
 		let uids = Object.keys(data);
 		let _data = [];
-		for (let i = 0 ; i < uids.length ; i++) {
-					
+		for (let i = 0 ; i < uids.length ; i++)					
 			_data.push([uids[i], data[uids[i]].PUB.name, data[uids[i]].PUB.rating, data[uids[i]].PRV.level_index, data[uids[i]].tm2, data[uids[i]].PRV.tm])		
-			
-		}	
+		
 		
 		//это заголовки
 		let header = ['uid','name','rating','level_index','last_seen','ts'];
 
 		my_table.create(_data, header, 'none', 'list');	
 	})
-}
-
-//КОНКРЕТНЫЙ ИГРОК
-async function player_info() {
-	
-	let player_name = document.getElementById("player_name").value;
-	document.body.innerHTML = "";
-	let snapshot = await firebase.database().ref("players").orderByChild("name").startAt(player_name).limitToFirst(5).once("value");
-	var data = snapshot.val();
-
-	//меняем дату на нормальный вид
-	Object.keys(data).forEach(k=>{data[k].tm = new Date(data[k].tm).toLocaleString();delete data[k].pic_url});
-
-	//создаем массив для последующей работы
-	let uids = Object.keys(data);
-	let _data = [];
-	for (let i = 0 ; i < uids.length ; i++)				
-		_data.push([uids[i], data[uids[i]].name, data[uids[i]].rating, data[uids[i]].games,data[uids[i]].money, data[uids[i]].tm])		
-		
-		
-	//это заголовки
-	let header = ['uid','name','rating','games','money','last_seen'];
-
-	my_table.create(_data, header, 'none', 'list');	
-}
-
-//удалить историю игр
-function delete_game_results(ref) {	
-	firebase.database().ref(ref).remove();
 }
 
 //удалить старых игроков
@@ -250,129 +219,16 @@ async function delete_old_players() {
 
 }
 
-//ИГРЫ
-async function get_games(ref) {
-	
-	let max_games = document.getElementById("max_players").value * 1;
-	
-	if(ref === 'finishes')
-		max_games = document.getElementById("max_players").value * 1;
-	if(ref === 'finishes2')
-		max_games = document.getElementById("max_leaders_games").value * 1;
-	
-	document.body.innerHTML = "";
-	let snapshot = await firebase.database().ref(ref).orderByChild("ts").limitToLast(max_games).once("value");
-	var data = snapshot.val();
-	
-	if (data === null) {
-	
-		alert("Нету данных");
-		return;
-	}
-	
-	//меняем дату на нормальный вид
-	Object.keys(data).forEach(k=>{data[k].ts = new Date(data[k].ts).toLocaleString()});
-		
-	//создаем массив для последующей работы
-	let uids = Object.keys(data);
-	let _data = [];
-	for (let i = 0 ; i < uids.length ; i++) {
-		_data.push([data[uids[i]].uid,data[uids[i]].player1, data[uids[i]].player2, data[uids[i]].fin_type,data[uids[i]].res, data[uids[i]].duration,data[uids[i]].client_id, data[uids[i]].rating, data[uids[i]].ts ])		
-	}	
-	
-	//это заголовки
-	let header = ['uid','player1','player2','fin_type','res','duration','client_id','rating','ts'];
-	
-	my_table.create(_data, header, 'none', 'list');	
-		
-
-}
-
-//ТАБЛИЦА ЛИДЕРОВ
-function show_leaders() {
-	document.body.innerHTML = "";
-	firebase.database().ref("players").orderByChild("rating").limitToLast(30).once("value").then((snapshot) => {
-		var data = snapshot.val();
-		//меняем дату на нормальный вид
-		Object.keys(data).forEach(k=>{data[k].tm = new Date(data[k].tm).toLocaleString();delete data[k].pic_url});
-		
-		//создаем массив для последующей работы
-		let uids = Object.keys(data);
-		let _data = [];
-		for (let i = 0 ; i < uids.length ; i++)
-			_data.push([uids[i], data[uids[i]].name, data[uids[i]].rating, data[uids[i]].games, data[uids[i]].tm])		
-
-		
-		//это заголовки
-		let header = ['uid','name','rating','games','last_seen'];
-
-		my_table.create(_data, header, 'none', 'list');	
-	})
-}
-
 //СОСТОЯНИЕ КОМНАТ
-async function states_room(room) {
+async function update_room_quick_stat() {
 
+	firebase.database().ref('room1/players').on('value',snapshot => {
+		document.getElementById("but_ref1").textContent = Object.keys(snapshot.val()||[]).length;
+	})
 	
-	document.body.style.fontSize='120px';
-	document.body.innerHTML = "";
-	let snapshot = await firebase.database().ref(room).once('value');
-
-	document.body.innerHTML = "";
-	var data = snapshot.val();
-	
-	
-	//создаем массив для последующей работы
-	let uids = Object.keys(data);
-	let _data = [];
-	for (let i = 0 ; i < uids.length ; i++) {
-	
-		//добавляем инфу о последнем посещении
-		data[uids[i]].last_seen = '';
-				
-		let snapshot2 = await firebase.database().ref("players/" + uids[i] + "/tm").once('value');
-		
-		
-		document.body.innerHTML = i +' / ' + uids.length;
-		let data2=snapshot2.val();
-		let last_seen = new Date(data2).toLocaleString();
-		let state = data[uids[i]].state;
-		let hidden = data[uids[i]].hidden;
-		if (hidden === 1) state ='h';
-		
-		
-		_data.push([uids[i], data[uids[i]].name, data[uids[i]].opp_id, data[uids[i]].rating, last_seen, state])		
-		
-	}	
-	
-	//это заголовки
-	let header = ['uid','name','opp_id','rating','last_seen','state'];
-	
-	document.body.innerHTML = "";
-	my_table.create(_data, header, room, 'states');	
-}
-
-//firebase.database().ref("finishes").remove();
-//firebase.database().ref("players/vNx2vRus1XIPlMFllQmDnqWfV3YZp7Ff5hYis5eKllc=/rating").set(2100);
-function get_state_tint(s) {
-	
-	switch(s) {
-		
-		case "o":
-			return "rgb(85,153,85)";					
-		break;
-		
-		case "b":
-			return "rgb(55,111,55)";
-		break;
-		
-		case "p":
-			return "rgb(52,68,114)";
-		break;	
-		case "h":
-			return "rgb(255,255,255)";
-		break;	
-	}		
+	firebase.database().ref('room2/players').on('value',snapshot => {
+		document.getElementById("but_ref2").textContent = Object.keys(snapshot.val()||[]).length;
+	})	
 }
 
 var my_table = {
@@ -513,6 +369,6 @@ var my_table = {
 
 }
 
-	
+update_room_quick_stat();
 </script>
 
