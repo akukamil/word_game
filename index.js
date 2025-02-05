@@ -4913,6 +4913,11 @@ lb={
 		//берем из кэша
 		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
 					
+		if(!leaders_data) {
+			game.set_loading(0);
+			return;			
+		}
+					
 		//загружаем из файербейса если надо
 		if (Date.now()-this.last_update>120000 || !leaders_data){			
 			const fbs_source={'online_game':'PUB/rating','sp_game':'PRV/level_index'}[game_type];
