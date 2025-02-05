@@ -2553,7 +2553,7 @@ players_cache={
 	async my_texture_from(pic_url){
 		
 		//если это мультиаватар
-		if(pic_url.includes('mavatar')) pic_url=multiavatar(pic_url);
+		if(pic_url&&pic_url.includes('mavatar')) pic_url=multiavatar(pic_url);
 	
 		try{
 			const texture = await PIXI.Texture.fromURL(pic_url);				
@@ -4950,12 +4950,12 @@ lb={
 		const leaders_array=[];
 		for(let uid in leaders_data){
 			
-			const leader_data=leaders_data[uid];
+			const leader_data=leaders_data[uid];			
 			let leader_params;
 			if (game_type==='online_game')	
-				leader_params={uid,name:leader_data.PUB.name, rating:leader_data.PUB.rating, pic_url:leader_data.PUB.pic_url};
+				leader_params={uid,name:leader_data?.PUB?.name, rating:leader_data?.PUB?.rating, pic_url:leader_data?.PUB?.pic_url};
 			else
-				leader_params={uid,name:leader_data.PUB.name, rating:leader_data.PRV.level_index, pic_url:leader_data.PUB.pic_url};
+				leader_params={uid,name:leader_data?.PUB?.name, rating:leader_data?.PRV?.level_index, pic_url:leader_data?.PUB?.pic_url};
 			
 			leaders_array.push(leader_params);
 			
@@ -4972,7 +4972,7 @@ lb={
 		for (let place in top){
 			const target=top[place];
 			const leader=leaders_array[place];
-			target.t_name.set2(leader.name,place>2?180:130);
+			target.t_name.set2(leader.name||'',place>2?180:130);
 			target.t_rating.text=leader.rating;
 	
 		}
