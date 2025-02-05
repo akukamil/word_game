@@ -4913,10 +4913,7 @@ lb={
 		//берем из кэша
 		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
 					
-		if(!leaders_data) {
-			game.set_loading(0);
-			return;			
-		}
+
 					
 		//загружаем из файербейса если надо
 		if (Date.now()-this.last_update>120000 || !leaders_data){			
@@ -4928,7 +4925,13 @@ lb={
 			else
 				this.sp_game_data=leaders_data;
 			this.last_update=Date.now();
-		}				
+		}		
+
+		if(!leaders_data) {
+			game.set_loading(0);
+			return;			
+		}
+		
 
 		const top={
 			0:{t_name:objects.lb_1_name,t_rating:objects.lb_1_rating,avatar:objects.lb_1_avatar},
