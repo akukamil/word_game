@@ -5183,7 +5183,7 @@ quiz3={
 
 		//убираем то что не нужно
 		objects.lamp_cont.visible=false
-		objects.q3_cat_cont.visible=false
+		objects.q3_quiz_info.visible=false
 		objects.erase_btn.visible=false
 
 		some_process.q3=function(){};
