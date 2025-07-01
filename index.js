@@ -4650,7 +4650,7 @@ quiz3={
 		if (!objects.lamp_cont.visible)
 			anim2.add(objects.lamp_cont,{alpha:[0,1]}, true, 0.5,'linear');
 		
-		const hints_num=objects.letters_objects.filter(o=>{return o.visible&&o.opened}).length
+		const hints_num=objects.letter_buttons.filter(o=>{return o.visible&&o.alpha===0.5}).length
 		this.start_tm=Date.now()
 		this.next_hint_tm=[15,30,45,50,50,50,50,50,50,50][hints_num]
 		//console.log(this.next_hint_tm)
