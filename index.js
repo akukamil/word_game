@@ -5042,7 +5042,7 @@ quiz3={
 
 
 			//определяем бонус
-			this.cur_bonus=event.num_of_players>1?event.num_of_players*2:0
+			this.cur_bonus=e.num_of_players>1?e.num_of_players*2:0
 			objects.t_ready_bonus.text=this.cur_bonus;
 			sound.play('get_ready');
 
