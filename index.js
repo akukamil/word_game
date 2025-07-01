@@ -4630,7 +4630,7 @@ quiz3={
 		
 		this.start_tm=Date.now()
 		
-		if(state?.q_id) this.show_keyboard(state.q_id)
+		if(state?.q_id) this.show_keyboard(state)
 
 		//подписываемся на изменения игроков
 		fbs.ref('room3/players').on('value',function(data){
@@ -4872,13 +4872,6 @@ quiz3={
 			l_obj.set_as_holder()
 			l_obj.opened=0
 		}
-		
-		//размещаем подсказки если есть
-		for (let i=0;i<hints.length;i++){			
-			const h=+hints[i]
-			objects.letters_objects[h].open()			
-		}	
-		
 			
 		some_process.q3=function(){quiz3.process()}
 	},
@@ -4925,11 +4918,11 @@ quiz3={
 		
 	},
 	
-	show_keyboard(q_id) {
+	show_keyboard(state) {
 		
 		
 		//добавляем в слово еще несколько букв и перемешываем
-		const word=this.data[q_id][0]
+		const word=this.data[state.q_id][0]
 		const _word_array=word.split('')
 		const uniqueSet = new Set(_word_array);
 		const unique_word_array = [...uniqueSet]
@@ -4949,7 +4942,7 @@ quiz3={
 		const word_array=Array.from(unique_word_array.sort(()=>0.5-Math.random()))
 
 		//скрвываем сначала все буквы
-		objects.letter_buttons.forEach(l=>{l.visible=false;l.angle=0});
+		objects.letter_buttons.forEach(l=>{l.visible=false;l.alpha=1;l.angle=0});
 
 		let LETTERS_IN_ROW=5;
 		let SIDE_MARGIN=50;
@@ -5005,7 +4998,20 @@ quiz3={
 		objects.letter_connect_graph.clear();
 		objects.letter_buttons.forEach(l=>{l.checked=0;l.hl.visible=false});
 		
-
+		
+		//скрываем букву которой нет в слове
+		if(state.h){
+			for (let i=0;i<state.h.length;i++){
+				for (const letter_object of objects.letter_buttons){			
+					if (letter_object.visible&&letter_object.alpha===1){					
+						if (!this.word.includes(letter_object.letter_text)){
+							letter_object.alpha=0.5;
+							break;
+						}					
+					}				
+				}					
+			}		
+		}
 	},
 	
 	erase(){
@@ -5065,7 +5071,7 @@ quiz3={
 			if (objects.ready_cont.visible)
 				anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
 			this.place_word(e.q_id)			
-			this.show_keyboard(e.q_id)
+			this.show_keyboard(e)
 			this.update_hint_timer()
 		}
 
@@ -5080,10 +5086,16 @@ quiz3={
 
 		if (e.h!==null&&e.h!==undefined){
 			
-			//открываем букву подсказку
-			const letter=this.word[e.h].toUpperCase()
-			objects.letters_objects[e.h].set_letter(letter)
-			objects.letters_objects[e.h].open()
+			
+			//скрываем букву которой нет в слове
+			for (const letter_object of objects.letter_buttons){			
+				if (letter_object.visible&&letter_object.alpha===1){					
+					if (!this.word.includes(letter_object.letter_text)){
+						letter_object.alpha=0.5;
+						break;
+					}					
+				}				
+			}
 			
 			sound.play('hint')
 			
