@@ -4573,6 +4573,7 @@ quiz3={
 	start_tm:0,
 	hide_ws_timer:0,
 	next_hint_tm:10,
+	data:[],
 		
 	async activate(){
 
@@ -4581,7 +4582,7 @@ quiz3={
 
 		//показываем статус игры
 		const state=await fbs_once('room3/state');
-		if(state?.w) this.place_word(state.w,state.c,state.h)
+		if(state?.q_id) this.place_word(state.q_id)
 	
 
 		//меняем дизайн
@@ -4616,6 +4617,9 @@ quiz3={
 		objects.t_quiz2_info.visible=true
 		objects.t_quiz2_info.text=''
 		
+		objects.q2_words.text=''
+		objects.q2_words.visible=true
+		
 		
 		//лампа подсказка
 		//objects.lamp_cont.visible=true
@@ -4626,7 +4630,7 @@ quiz3={
 		
 		this.start_tm=Date.now()
 		
-		if(state?.w) this.show_keyboard(state.w)
+		if(state?.q_id) this.show_keyboard(state.q_id)
 
 		//подписываемся на изменения игроков
 		fbs.ref('room3/players').on('value',function(data){
@@ -4648,7 +4652,7 @@ quiz3={
 		
 		const hints_num=objects.letters_objects.filter(o=>{return o.visible&&o.opened}).length
 		this.start_tm=Date.now()
-		this.next_hint_tm=[10,10,15,20,30,40,50,50,50,50,50,50][hints_num]
+		this.next_hint_tm=[15,30,45,50,50,50,50,50,50,50][hints_num]
 		//console.log(this.next_hint_tm)
 		objects.lamp_mask.width=1
 		anim2.add(objects.lamp_icon,{angle:[0,-10]}, true, 0.25,'shake');
@@ -4834,7 +4838,13 @@ quiz3={
 
 	},
 
-	place_word(word,cat, hints=''){
+	place_word(quiz_id){
+		
+		const word=this.data[quiz_id||0][0]
+		const desc=this.data[quiz_id||0][1]
+		//
+		anim3.add(objects.q3_quiz_info,{alpha:[0,1,'linear']}, true, 0.35);
+		objects.q3_quiz_info.text=desc
 				
 		//отображаем слово на доске
 		const LETTERS_IN_ROW=word.length;
@@ -4850,7 +4860,6 @@ quiz3={
 		
 		
 		this.word=word	
-		this.cat=cat
 		//от 5 до 10 слов
 		const tar_scl=0.6-0.15*(LETTERS_IN_ROW-5)*0.2
 		for (let x=0;x<LETTERS_IN_ROW;x++){
@@ -4870,11 +4879,6 @@ quiz3={
 			objects.letters_objects[h].open()			
 		}	
 		
-		//показываем название категории
-		anim3.add(objects.q3_cat_cont,{alpha:[0,1,'linear']}, true, 0.35);
-		objects.q3_cat.text='Тема: '
-		objects.q3_cat2.text='Тема: '+this.cat
-		objects.q3_cat_cont.x=(M_WIDTH-objects.q3_cat_cont.width)*0.5
 			
 		some_process.q3=function(){quiz3.process()}
 	},
@@ -4921,10 +4925,11 @@ quiz3={
 		
 	},
 	
-	show_keyboard(word) {
+	show_keyboard(q_id) {
 		
 		
 		//добавляем в слово еще несколько букв и перемешываем
+		const word=this.data[q_id][0]
 		const _word_array=word.split('')
 		const uniqueSet = new Set(_word_array);
 		const unique_word_array = [...uniqueSet]
@@ -5056,11 +5061,11 @@ quiz3={
 			quiz3.update_icons();
 		}
 
-		if (e.nw){
+		if (e.q_id){
 			if (objects.ready_cont.visible)
 				anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
-			this.place_word(e.nw,e.c)			
-			this.show_keyboard(e.nw)
+			this.place_word(e.q_id)			
+			this.show_keyboard(e.q_id)
 			this.update_hint_timer()
 		}
 
@@ -5501,6 +5506,7 @@ main_loader={
 		game_res.add('tile_open',git_src+'sounds/tile_open.mp3');
 		game_res.add('click',git_src+'sounds/click.mp3');
 		game_res.add('progress',git_src+'sounds/progress.mp3');
+		game_res.add('q3_data',git_src+'q3_data.txt');
 		
 		game_res.add("m3_font", git_src+"fonts/core_sans_ds/font.fnt");
 
@@ -6024,6 +6030,10 @@ async function init_game_env(lang) {
 	[w,l]=game.get_world_and_level(my_data.level_index);
 	my_data.world=w;
 	my_data.level=l;
+	
+	
+	//данные для 3 задачи
+	quiz3.data=eval(game_res.resources.q3_data.data);
 
 	//убираем контейнер
 	await new Promise(resolve=> {setTimeout(resolve, 2000);});
