@@ -4439,6 +4439,7 @@ quiz2={
 			letter_object.angle=irnd(-2,2);
 			letter_object.bcg.tint=0xffffff;
 			letter_object.checked=0;
+			letter_object.alpha=1;
 
 			anim2.add(letter_object,{y:[800,tar_y],x:[0,tar_x]}, true, 0.5,'easeOutBack');
 		}
