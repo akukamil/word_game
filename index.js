@@ -2873,8 +2873,10 @@ game={
 
 		//переназначаем кнопку шафл
 		objects.shuffle.pointerdown=function(){game.shuffle()};
+		objects.shuffle.x=objects.shuffle.sx;
+		objects.shuffle.visible=true;
 		objects.exit_btn.pointerdown=function(){game.exit_btn_down()};
-
+		objects.exit_btn.x=objects.exit_btn.sx;
 		objects.letters_area_bcg.pointermove=game.area_move.bind(game);
 		objects.letters_area_bcg.pointerup=game.area_up.bind(game);
 		objects.letters_area_bcg.pointerdown=game.area_down.bind(game);
@@ -3153,6 +3155,7 @@ game={
 		for (let i=0;i<letters.length;i++){
 			const letter_object=objects.letter_buttons[i];
 			letter_object.visible=true;
+			letter_object.alpha=1;
 			letter_object.x=objects.letters_area_bcg.x+Math.sin(start_angle+angle_step*i)*110;
 			const tar_y=objects.letters_area_bcg.y+Math.cos(start_angle+angle_step*i)*110;
 
