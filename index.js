@@ -5091,7 +5091,7 @@ quiz3={
 		if (e.b) {
 				
 			console.log('BONUS:',e.b)
-		},
+		}
 		
 		if (e.h!==null&&e.h!==undefined){
 			
