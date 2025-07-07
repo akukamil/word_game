@@ -4579,6 +4579,7 @@ quiz3={
 	hide_ws_timer:0,
 	next_hint_tm:10,
 	data:[],
+	skip_first_event:0,
 		
 	async activate(){
 
@@ -4647,7 +4648,8 @@ quiz3={
 		})
 
 		//подписываемся на события комнаты
-		fbs.ref('room3/events').on('value',function(data){
+		this.skip_first_event=0
+		fbs.ref('room3/events').on('value',(data)=>{			
 			quiz3.game_events(data.val())
 		})
 	
@@ -4666,7 +4668,7 @@ quiz3={
 		objects.lamp_mask.width=1
 		anim2.add(objects.lamp_icon,{angle:[0,-10]}, true, 0.25,'shake');
 		
-		if (hints_num===this.word.length-1){
+		if (hints_num>=7){
 			objects.lamp_mask.width
 			some_process.q3=function(){}			
 		}		
@@ -4758,9 +4760,7 @@ quiz3={
 			return
 		}
 		
-		sound.play('click')
-		
-		
+		sound.play('click')		
 		
 		//собираем слово
 		let word_to_check=''
@@ -4783,8 +4783,6 @@ quiz3={
 			if (let_obj.opened===0)
 				let_obj.letter_sprite.visible=false
 		}
-
-
 
 		anim3.add(objects.check_word_btn,{alpha:[0.25,1,'linear']}, true, 1,false);
 		fbs.ref('room3/players_events').set({uid:my_data.uid,w:word_to_check,tm:Date.now()});
@@ -4822,6 +4820,11 @@ quiz3={
 			return
 		}		
 		
+		if (this.alpha===0.5){
+			objects.t_quiz2_info.text='Этой буквы нет в слове!'
+			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false)
+			return
+		}
 		
 		//отправляем букву на первую которая не открыта
 		for (let i=0;i<quiz3.word.length;i++){
@@ -5005,12 +5008,12 @@ quiz3={
 		//подчищаем что могло остаться
 		objects.letters_area_bcg.interactive=true;
 		objects.letter_connect_graph.clear();
-		objects.letter_buttons.forEach(l=>{l.checked=0;l.hl.visible=false});
+		objects.letter_buttons.forEach(l=>{l.checked=0;l.alpha=1;l.hl.visible=false});
 		
 		
 		//скрываем букву которой нет в слове
 		if(state.h){
-			for (let i=0;i<state.h.length;i++){
+			for (let i=0;i<state.h;i++){
 				for (const letter_object of objects.letter_buttons){			
 					if (letter_object.visible&&letter_object.alpha===1){					
 						if (!this.word.includes(letter_object.letter_text)){
@@ -5043,6 +5046,10 @@ quiz3={
 	game_events(e){
 
 		//console.log(e);
+		if(this.skip_first_event===0){
+			this.skip_first_event=1
+			return
+		}
 
 		if (!e)
 			return
@@ -5105,10 +5112,9 @@ quiz3={
 			
 		}
 		
-		if (e.h!==null&&e.h!==undefined){
-			
-			
-			//скрываем букву которой нет в слове
+		if (e.h){
+						
+			//скрываем букву которой нет в слове (первую найденную)
 			for (const letter_object of objects.letter_buttons){			
 				if (letter_object.visible&&letter_object.alpha===1){					
 					if (!this.word.includes(letter_object.letter_text)){
