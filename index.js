@@ -4874,7 +4874,7 @@ quiz3={
 		for (let x=0;x<LETTERS_IN_ROW;x++){
 			const l_obj=objects.letters_objects[x]
 			l_obj.x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*x;
-			l_obj.y=345
+			l_obj.y=355
 			l_obj.scale_xy=tar_scl
 			l_obj.visible=true
 			l_obj.set_letter(word[x].toUpperCase())				
