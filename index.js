@@ -4574,6 +4574,7 @@ quiz3={
 	word:'ОРАНГУТАНГИЕ',
 	keep_alive_timer:0,
 	cur_bonus:0,
+	start_bonus:0,
 	start_tm:0,
 	hide_ws_timer:0,
 	next_hint_tm:10,
@@ -4624,6 +4625,10 @@ quiz3={
 		objects.q2_words.text=''
 		objects.q2_words.visible=true
 		
+		//бонус
+		this.cur_bonus=state.b
+		objects.t_q3_bonus.text=state.b
+		anim3.add(objects.q3_bonus_cont,{alpha:[0,1,'linear'],scale_xy:[0,1,'easeOutBack']}, true, 0.25)
 		
 		//лампа подсказка
 		//objects.lamp_cont.visible=true
@@ -5047,7 +5052,9 @@ quiz3={
 
 			//определяем бонус
 			this.cur_bonus=e.num_of_players>1?e.num_of_players*2:0
-			objects.t_ready_bonus.text=this.cur_bonus;
+			this.start_bonus=this.cur_bonus
+			objects.t_ready_bonus.text=this.cur_bonus
+			objects.t_q3_bonus.text=this.cur_bonus
 			sound.play('get_ready');
 
 			if (objects.winner_cont.visible){
@@ -5090,7 +5097,12 @@ quiz3={
 
 		if (e.b) {
 				
-			console.log('BONUS:',e.b)
+			//console.log('BONUS:',e.b)
+			//бонус
+			this.cur_bonus=this.start_bonus+e.b
+			objects.t_q3_bonus.text=this.cur_bonus
+			anim3.add(objects.q3_bonus_cont,{scale_xy:[0,1,'easeOutBack']}, true, 0.25)
+			
 		}
 		
 		if (e.h!==null&&e.h!==undefined){
@@ -5205,6 +5217,7 @@ quiz3={
 		//убираем то что не нужно
 		objects.lamp_cont.visible=false
 		objects.q3_quiz_info.visible=false
+		objects.q3_bonus_cont.visible=false
 		objects.erase_btn.visible=false
 
 		some_process.q3=function(){};
