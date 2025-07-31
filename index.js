@@ -4588,7 +4588,7 @@ quiz3={
 
 		//показываем статус игры
 		const state=await fbs_once('room3/state');
-		if(state?.q_id) this.place_word(state.q_id)
+		if(state) this.place_word(state.q_id)
 	
 
 		//меняем дизайн
@@ -4640,7 +4640,7 @@ quiz3={
 		
 		this.start_tm=Date.now()
 		
-		if(state?.q_id) this.show_keyboard(state)
+		if(state) this.show_keyboard(state)
 
 		//подписываемся на изменения игроков
 		fbs.ref('room3/players').on('value',function(data){
