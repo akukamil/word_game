@@ -4158,7 +4158,7 @@ quest={
 	
 	header_down(){
 	
-		message.add('Пока недосупно(((')
+		message.add('Пока недоступно(((')
 		
 	},
 	
