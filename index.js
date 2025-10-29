@@ -4292,7 +4292,7 @@ quest={
 		sound.play('button0')
 		console.log('letter_checked_on_move',obj.letter_text)
 		obj.checked=1
-		obj.bcg.tint=0xff99ff
+		obj.bcg.tint=0xaa77aa
 		this.my_path.push([obj.gy,obj.gx])
 		this.cur_word+=obj.letter_text
 		
@@ -4314,7 +4314,7 @@ quest={
 		this.drag_started=1		
 		console.log('drag_started',obj.letter_text)
 		obj.checked=1
-		obj.bcg.tint=0xff99ff
+		obj.bcg.tint=0xaa77aa
 		this.my_path=[[obj.gy,obj.gx]]
 		this.cur_word=obj.letter_text
 	},
