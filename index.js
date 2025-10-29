@@ -1,5 +1,5 @@
 var M_WIDTH=440, M_HEIGHT=740;
-var app ={stage:{},renderer:{}}, game_res, objects={}, game_tick=0, LANG = 0, git_src;
+var app ={stage:{},renderer:{}}, game_res, objects={},game_name='word_game', game_tick=0, LANG = 0, git_src;
 var some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
 
@@ -1230,9 +1230,16 @@ class letter_object_class extends PIXI.Container{
 		this.hl=new PIXI.Sprite(gres.letter_button_hl.texture);
 		this.hl.anchor.set(0.5,0.5);
 		this.hl.visible=false;
-
+		
 		this.bcg=new PIXI.Sprite(gres.big_letter_bcg.texture);
 		this.bcg.anchor.set(0.5,0.5);
+		//this.bcg.interactive=true
+		//this.bcg.buttonMode=true
+		//const t=this
+		//this.bcg.pointerdown=function(){quest.letter_down(t)}
+		//this.bcg.pointerover=function(){quest.letter_over(t)}
+		//this.bcg.pointerup=function(){quest.letter_up(t)}
+		//this.bcg.pointerupoutside=function(){quest.letter_up(t)}
 
 		this.bonus=new PIXI.Sprite();
 		this.bonus.anchor.set(0.5,0.5);
@@ -1852,7 +1859,7 @@ anim3={
 	},
 
 	wait(seconds){
-		return this.add(this.empty_spr,{x:[0,1]}, false, seconds,'linear');
+		return this.add(this.empty_spr,{x:[0,1,'linear']}, false, seconds);
 	},
 
 	linear(x) {
@@ -1868,6 +1875,15 @@ anim3={
 				slot.on=0;
 			}
 		}
+	},
+
+	easeBridge(x){
+
+		if(x<0.1)
+			return x*10;
+		if(x>0.9)
+			return (1-x)*10;
+		return 1
 	},
 
 	easeOutBack(x) {
@@ -1886,8 +1902,18 @@ anim3={
 		return Math.sin( x * Math.PI * 0.5);
 	},
 
+	easeOutQuart(x){
+		return 1 - Math.pow(1 - x, 4);
+	},
+
 	easeOutCubic(x) {
 		return 1 - Math.pow(1 - x, 3);
+	},
+
+	flick(x){
+
+		return Math.abs(Math.sin(x*6.5*3.141593));
+
 	},
 
 	easeInBack(x) {
@@ -1915,6 +1941,23 @@ anim3={
 
 	easeInCubic(x) {
 		return x * x * x;
+	},
+
+	ease3peaks(x){
+
+		if (x < 0.16666) {
+			return x / 0.16666;
+		} else if (x < 0.33326) {
+			return 1-(x - 0.16666) / 0.16666;
+		} else if (x < 0.49986) {
+			return (x - 0.3326) / 0.16666;
+		} else if (x < 0.66646) {
+			return 1-(x - 0.49986) / 0.16666;
+		} else if (x < 0.83306) {
+			return (x - 0.6649) / 0.16666;
+		} else if (x >= 0.83306) {
+			return 1-(x - 0.83306) / 0.16666;
+		}
 	},
 
 	ease2back(x) {
@@ -1955,8 +1998,8 @@ anim3={
 
 			found=true;
 
-			obj.visible = true;
-			obj.ready = false;
+			obj.visible = true
+			obj.ready = false
 
 			//заносим базовые параметры слота
 			slot.on=1;
@@ -2039,11 +2082,11 @@ anim3={
 					}
 
 					slot.obj.visible=slot.vis_on_end;
-					slot.obj.alpha = 1*slot.vis_on_end;
+					if(!slot.vis_on_end) slot.obj.alpha=1;
 
-					slot.obj.ready=true;
-					slot.p_resolve(1);
-					slot.on = 0;
+					slot.obj.ready=true
+					slot.p_resolve(1)
+					slot.on = 0
 				}
 			}
 		}
@@ -2586,7 +2629,7 @@ players_cache={
 	async my_texture_from(pic_url){
 
 		//если это мультиаватар
-		if(pic_url&&pic_url.includes('mavatar')) pic_url=multiavatar(pic_url);
+		if(pic_url.includes('mavatar')) pic_url=multiavatar(pic_url);
 
 		try{
 			const texture = await PIXI.Texture.fromURL(pic_url);
@@ -2597,29 +2640,56 @@ players_cache={
 
 	},
 
-	async update(uid,params){
+	async update(uid,params={}){
 
 		//если игрока нет в кэше то создаем его
-		if (!this.players[uid]) this.players[uid]={};
+		if (!this.players[uid]) this.players[uid]={}
 
 		//ссылка на игрока
+		const player=this.players[uid]
+
+		//заполняем параметры которые дали
+		for (let param in params) player[param]=params[param]
+
+		if (!player.name) player.name=await fbs_once('players/'+uid+'/name')
+
+
+	},
+
+	async update_avatar(uid){
+
 		const player=this.players[uid];
+		if(!player) alert('Не загружены базовые параметры '+uid);
 
-		//заполняем параметры которые дали (это из лидерборда)
-		if (params)
-			for (let param in params) player[param]=params[param];
-
-		//если уже есть даннные до выходим
+		//если текстура уже есть
 		if (player.texture) return;
 
-		const player_pub_data=params||await fbs_once('players/'+uid+'/PUB');
+		//если нет URL
+		if (!player.pic_url) player.pic_url=await fbs_once('players/'+uid+'/pic_url');
 
-		player.name=player_pub_data.name||'---';
-		player.pic_url=player_pub_data.pic_url;
-		player.rating=player_pub_data.rating||0;
-		player.texture=await this.my_texture_from(player.pic_url);
+		if(player.pic_url==='https://vk.com/images/camera_100.png')
+			player.pic_url='https://akukamil.github.io/domino/vk_icon.png';
 
-	}
+		//загружаем и записываем текстуру
+		if (player.pic_url) player.texture=await this.my_texture_from(player.pic_url);
+
+	},
+
+	async update_avatar_forced(uid, pic_url){
+
+		const player=this.players[uid];
+		if(!player) alert('Не загружены базовые параметры '+uid);
+
+		if(pic_url==='https://vk.com/images/camera_100.png')
+			pic_url='https://akukamil.github.io/domino/vk_icon.png';
+
+		//сохраняем
+		player.pic_url=pic_url;
+
+		//загружаем и записываем текстуру
+		if (player.pic_url) player.texture=await this.my_texture_from(player.pic_url);
+
+	},
 
 }
 
@@ -2656,7 +2726,7 @@ hints={
 		this.source.hints_num--;
 		objects.t_hints_num.text=this.source.hints_num;
 		if (this.source===game)
-			fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(this.source.hints_num);
+			fbs.ref('players/'+my_data.uid+'/hints_num').set(this.source.hints_num);
 
 		const random_letter=not_opened_letters[irnd(0,not_opened_letters.length-1)];
 
@@ -2715,7 +2785,7 @@ hints={
 			anim2.add(objects.t_hints_num,{scale_xy:[1,1.5]}, true, 1.5,'ease2back');
 
 			if (this.source===game){
-				fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(this.source.hints_num);
+				fbs.ref('players/'+my_data.uid+'/hints_num').set(this.source.hints_num);
 			}
 
 			objects.t_hints_num.text=this.source.hints_num;
@@ -2729,6 +2799,38 @@ hints={
 
 	}
 
+
+}
+
+message={
+
+	promise_resolve :0,
+
+	async add(text, timeout=3000) {
+
+		if (this.promise_resolve!==0)
+			this.promise_resolve("forced");
+
+
+		objects.message_text.text=text;
+
+		await anim2.add(objects.message_cont,{alpha:[0,1]}, true, 0.25,'linear');
+
+		let res = await new Promise((resolve, reject) => {
+				message.promise_resolve = resolve;
+				setTimeout(resolve, timeout)
+			}
+		);
+
+		if (res === "forced")
+			return;
+
+		anim2.add(objects.message_cont,{alpha:[1, 0]}, false, 0.25,'linear');
+	},
+
+	clicked() {
+		message.promise_resolve()
+	}
 
 }
 
@@ -2908,7 +3010,6 @@ game={
 
 	async run_world(s_world, s_level){
 
-
 		//если это первый раз в игре
 		if (my_data.first_log){
 			objects.tutorial_info.text='Соединяй буквы и составляй слова отгадывая кроссворд';
@@ -3007,7 +3108,7 @@ game={
 
 				//устанавливаем следующий уровень
 				my_data.level_index++;
-				fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
+				fbs.ref('players/'+my_data.uid+'/level_index').set(my_data.level_index);
 
 				//убираем буквы
 				await this.drop_letters();
@@ -3046,14 +3147,12 @@ game={
 
 	process_game_end(){
 
-
-
 		sound.play('world_complete');
 		anim2.add(objects.game_end,{alpha:[0,1]}, true, 0.5,'linear');
 		my_data.level_index=0;
 		my_data.world=0;
 		my_data.level=0;
-		fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
+		fbs.ref('players/'+my_data.uid+'/level_index').set(my_data.level_index);
 
 		//показываем вспышку
 		const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
@@ -3063,7 +3162,6 @@ game={
 		anim_obj3.angle=0;
 		anim_obj3.scale_xy=1;
 		anim3.add(anim_obj3,{alpha:[0,1,'linear'],scale_xy:[0.666,1,'easeOutBack'],angle:[0,40,'linear']}, false, 5);
-
 
 	},
 
@@ -3598,1649 +3696,641 @@ game={
 
 }
 
-quiz1={
-
-	words_num:0,
-	words_solved_num:0,
-	first_event_skip:1,
-	keep_alive_timer:0,
-	hints_num:0,
-	cur_bonus:0,
-	on:0,
-	init_skipped:0,
-	action_resolver:()=>{},
-
-	async activate(){
-
-		//если это первый раз в игре
-		if (my_data.first_log){
-			objects.tutorial_info.text='Соединяй буквы и составляй слова отгадывая кроссворд. Первый игрок отгадавший все слова в кроссворде получает бонус!';
-			await anim2.add(objects.tutorial_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');
-			tutorial.activate();
-			//ждем нажатия кнопки
-			await new Promise(res=>{this.action_resolver=res})
-			anim2.add(objects.tutorial_cont,{x:[0,-M_WIDTH]}, false, 0.5,'linear');
-		}
-
-		//переназначаем кнопку шафл
-		objects.shuffle.pointerdown=function(){game.shuffle()};
-		objects.exit_btn.pointerdown=function(){game.exit_btn_down()};
-
-		hints.activate(this);
-
-		this.on=1;
-		this.init_skipped=0;
-
-		objects.exit_btn.pointerdown=function(){quiz1.exit_btn_down()};
-		this.keep_alive_timer=setInterval(function(){quiz1.keep_alive()},45000);
-		quiz1.keep_alive();
-		anim2.add(objects.players_icons_cont,{y:[-200,0]}, true, 0.4,'linear');
-
-		//меняем дизайн
-		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
-			objects.bcg.texture=gres.main_bcg2.texture;
-			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
-		});
-
-		objects.letter_buttons.forEach(l=>{l.bcg.texture=gres.big_letter2_bcg.texture;l.visible=false});
-
-		//загружаем игроков
-		console.log('загружаем комнату...')
-		game.set_loading(1);
-		const players=await fbs_once('room1/players');
-		await this.update_players(players);
-		game.set_loading(0);
-		console.log('загружено!')
-		
-		
-		objects.exit_btn.x=objects.exit_btn.sx
-
-		//подписываемся на изменения игроков
-		fbs.ref('room1/players').on('value',function(data){
-			quiz1.update_players(data.val())
-		})
-
-		//подписываемся на события комнаты
-		fbs.ref('room1/events').on('value',function(data){
-			quiz1.game_events(data.val())
-		})
-
-		//подписываемся на новый кроссворд
-		fbs.ref('room1/new_cw').on('value',function(data){
-			quiz1.game_events(data.val())
-		})
-
-
-	},
-
-	async update_players(uid_data){
-
-		//обновляем данные об игроках
-		for (let uid in uid_data){
-			await players_cache.update(uid);
-
-			const active_icon=objects.players_icons.find(i=>{return i.visible&&i.uid===uid});
-
-			if (!active_icon){
-				const num_of_icons=objects.players_icons.filter(i=>i.visible).length;
-				const free_icon=objects.players_icons.find(i=>i.visible===false);
-				free_icon.x=6.667+num_of_icons*86.667;
-				free_icon.visible=true;
-				free_icon.uid=uid;
-				free_icon.t_solved.text=0;
-				const pname=players_cache.players[uid].name.split(' ')[0];
-				free_icon.t_name.set2(pname,75);
-				free_icon.avatar.set_texture(players_cache.players[uid].texture);
-				free_icon.place=num_of_icons;
-				if (uid===my_data.uid)
-					free_icon.t_name.tint=0x0033ff;
-				else
-					free_icon.t_name.tint=0xffffff;
-			}
-		}
-
-		//убираем пропавших
-		objects.players_icons.forEach(icon=>{
-			if (icon.visible){
-				if (!uid_data[icon.uid])
-					icon.visible=false;
-			}
-		})
-
-		this.update_icons();
-
-
-	},
-
-	keep_alive(){
-
-		//загружаем мои данные в комнату
-		fbs.ref('room1/players/'+my_data.uid).set(firebase.database.ServerValue.TIMESTAMP);
-
-	},
-
-	game_events(event){
-
-		//console.log(event);
-
-		if (event.event==='NEW_CW'){
-			//console.log(event);
-			//определяем бонус
-			this.cur_bonus=event.num_of_players*2;
-
-			this.start_game(event.quiz_data);
-		}
-
-		if (!this.init_skipped){
-			this.init_skipped=1;
-			return;
-		}
-
-		if (event.event==='PREPARE'){
-
-
-			//определяем бонус
-			this.cur_bonus=event.num_of_players>1?event.num_of_players*2:0
-			objects.t_ready_bonus.text=this.cur_bonus;
-			sound.play('get_ready');
-
-			if (objects.winner_cont.visible){
-				anim3.add(objects.winner_cont,{alpha:[1,0.2,'linear'],scale_xy:[1,0.2,'easeInBack'],angle:[0,-700,'easeInBack']}, false, 0.75);
-			}
-
-			anim2.add(objects.crossword_cont,{alpha:[0,1]}, true, 0.25,'linear');
-			objects.players_icons.forEach(icon=>{
-				if (icon.visible){
-					icon.solved_num=0;
-					icon.t_solved.text=0;
-				}
-			})
-
-			objects.t_players_online.text=`Игроков онлайн: ${event.num_of_players}`;
-			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);
-
-
-			this.update_icons();
-		}
-
-		if (event.event==='PROGRESS'){
-			const player_icon=objects.players_icons.find(i=>i.uid===event.uid)
-			//console.log(event);
-
-			if (player_icon){
-				sound.play('progress');
-				player_icon.solved_num=event.solved_num;
-				player_icon.t_solved.text=event.solved_num;
-				player_icon.make_progress_hl();
-				this.update_icons();
-			}
-		}
-
-		if (event.event==='WINNER'){
-			this.game_end(event.uid);
-		}
-
-		if (event.event==='HINT'){
-			this.make_random_hint();
-		}
-
-
-	},
-
-	make_random_hint(){
-
-		if (document.hidden) return;
-
-		const not_opened_letters=objects.letters_objects.filter(l=>l.visible&&l.opened===0);
-		if (not_opened_letters.length===0) return
-
-
-		const random_letter=not_opened_letters[irnd(0,not_opened_letters.length-1)];
-
-		//определяем глобальное положение целевой буквы
-		const tar_x=random_letter.x*objects.crossword_cont.scale_x+objects.crossword_cont.x;
-		const tar_y=random_letter.y*objects.crossword_cont.scale_y+objects.crossword_cont.y;
-
-		//анимация
-		const free_spr=objects.anim_objects.find(o=>!o.visible);
-		if (free_spr){
-			free_spr.texture=gres.star_img.texture;
-			const sx=220;
-			const sy=570;
-			anim3.add(free_spr,{x:[sx,tar_x,'linear'],y:[sy,tar_y,'linear'],angle:[0,100,'ease2back'],scale_xy:[0.7,1.5,'ease2back'],alpha:[1,0.5,'linear']}, false, 0.7).then(()=>{
-				random_letter.open_as_hint();
-			})
-		}else{
-			random_letter.open_as_hint();
-		}
-
-
-	},
-
-	async game_end(winner_uid){
-
-
-		game.drop_letters();
-		objects.shuffle.visible=false;
-		objects.hint_button_cont.visible=false;
-
-		//открываем кроссворд
-		objects.letters_objects.forEach(l=>{
-			if (l.visible)
-				if (!l.opened)
-					l.open();
-		})
-
-		const start_tm=Date.now();
-		const winner_rating=await fbs_once('players/'+winner_uid+'/PUB/rating');
-		const winner_data=players_cache.players[winner_uid];
-		const db_tm=Date.now()-start_tm;
-		const wait_tm=Math.max(2,2000-db_tm);
-
-		await new Promise(resolve=> {setTimeout(resolve, wait_tm);});
-
-		objects.winner_avatar.set_texture(winner_data.texture)
-		objects.t_winner_name.text=winner_data.name;
-		objects.t_winner_rating.text=winner_rating;
-
-		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
-		sound.play('winner');
-
-		//вспышка
-		let anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=M_WIDTH*0.5;
-			anim_obj.y=M_HEIGHT*0.5;
-			anim_obj.texture=gres.stars_net_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
-		//обновляем рейтинг на карточке
-		await new Promise(resolve=> {setTimeout(resolve, 1000);});
-		objects.t_winner_rating.text=winner_rating+this.cur_bonus;
-		if (winner_uid===my_data.uid){
-			my_data.rating+=this.cur_bonus;
-			fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);
-		}
-
-		anim2.add(objects.t_winner_rating,{scale_xy:[1,1.5]}, true, 1.5,'ease2back');
-
-		//вспышка
-		anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=220;
-			anim_obj.y=490;
-			anim_obj.texture=gres.white_orb_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
-
-	},
-
-	update_icons(){
-
-		const vis_icons=objects.players_icons.filter(i=>i.visible);
-		const icons_sorted=vis_icons.sort((a,b) =>  b.solved_num - a.solved_num);
-
-		for(let i=0;i<icons_sorted.length;i++){
-
-			const player_icon=icons_sorted[i];
-			if (player_icon.visible===false)
-				continue;
-
-			player_icon.place=i;
-
-			const cx=player_icon.x;
-			const tx=6.667+player_icon.place*86.667;
-			if(cx!==tx)
-				anim2.add(player_icon,{x:[cx,tx]}, true, 0.15,'linear',false);
-		}
-
-	},
-
-	async start_game(cw_data){
-
-		objects.winner_cont.visible=false;
-		objects.shuffle.visible=true;
-		objects.hint_button_cont.visible=true;
-		if (objects.ready_cont.visible)
-			anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
-		
-		//вычисляем уникальные буквы
-		game.prepare_words2(cw_data);
-
-		this.words_num=cw_data.length;
-		this.words_solved_num=0;
-
-		//двигаем и показываем игровое поле
-		await anim2.add(objects.game_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');
-
-		objects.players_icons.forEach(i=>i.solved_num=0);
-
-		//показываем буквы - вычисляем уникальные
-		const total_letters={};
-		for (let word_data of cw_data){
-			const word=word_data[0];
-			const letters_num={};
-			for (letter of word){
-				if (letters_num[letter])
-					letters_num[letter]++;
-				else
-					letters_num[letter]=1;
-			}
-
-			for (let letter in letters_num){
-
-				if (total_letters[letter])
-					total_letters[letter]=Math.max(total_letters[letter],letters_num[letter]);
-				else
-					total_letters[letter]=letters_num[letter];
-			}
-		}
-
-		const unique_letters=[];
-		Object.entries(total_letters).forEach(([key, value]) => {
-		  for (let i = 0; i < value; i++)
-			unique_letters.push(key);
-		});
-		game.letters_num=unique_letters.length;
-		game.show_letters(unique_letters);
-
-
-	},
-
-	async open_word_anim(word_object){
-
-		this.words_solved_num++;
-
-		//буквы летят на места
-		for (let i=0;i<game.letters_seq.length;i++){
-
-			const letter_object=game.letters_seq[i];
-			const fly_letter=objects.fly_letters[i];
-
-			const sx=letter_object.x;
-			const sy=letter_object.y;
-			const s_angle=letter_object.angle;
-			fly_letter.set_letter(letter_object.letter_text);
-
-			const cur_scale=letter_object.scale_xy;
-
-			//определяем глобальное положение целевых букв
-			const tar_x=word_object.letters[i].x*objects.crossword_cont.scale_x+objects.crossword_cont.x;
-			const tar_y=word_object.letters[i].y*objects.crossword_cont.scale_y+objects.crossword_cont.y;
-			const tar_scale=objects.crossword_cont.scale_xy*word_object.letters[i].scale_xy;
-
-			anim2.add(fly_letter,{x:[sx,tar_x],y:[sy,tar_y],scale_xy:[cur_scale,tar_scale],alpha:[0.5,1],angle:[s_angle,0]}, true, 0.5,'linear');
-
-		}
-
-		sound.play('word_open0');
-		await anim2.wait(0.5);
-
-		fbs.ref('room1/players_events').set({uid:my_data.uid,solved_num:this.words_solved_num,tm:Date.now()});
-
-		sound.play('word_open');
-
-		//убираем летящие буквы и открываем настоящие буквы
-		objects.fly_letters.forEach(f=>f.visible=false);
-		word_object.letters.forEach(s=>s.open());
-		word_object.opened=1;
-
-		//дополнительная анимация доски - звездочки вокруг каждой буквы
-		for (let i=0;i<word_object.letters.length;i++){
-			const letter_object=objects.fly_letters[i];
-			const flash=objects.flashes.find(f=>f.visible===false);
-			flash.x=letter_object.x;
-			flash.y=letter_object.y;
-			flash.angle=irnd(0,360);
-			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear');
-		}
-
-
-	},
-
-	exit_btn_down(){
-		if (anim2.any_on()||anim3.any_on()) return;
-
-		sound.play('click');
-		this.close();
-		main_menu.activate();
-
-	},
-
-	close(){
-
-		this.on=0;
-
-
-
-		//отключаем файербейс
-		fbs.ref('room1/players').off()
-		fbs.ref('room1/events').off()
-		fbs.ref('room1/new_cw').off()
-		fbs.ref('room1/players/'+my_data.uid).remove()
-
-		objects.ready_cont.visible=false;
-		objects.winner_cont.visible=false;
-		anim2.add(objects.players_icons_cont,{y:[0,-200]}, false, 0.4,'linear');
-		anim2.add(objects.game_cont,{alpha:[1,0],x:[0,-440]}, false, 0.4,'linear');
-		clearInterval(this.keep_alive_timer);
-
-	}
-
-
-}
-
-quiz2={
-
-	word:'АКАРОЛОГИЯ',
-	added_words:[],
-	keep_alive_timer:0,
-	start_time:0,
-	on:0,
-	action_resolver:0,
-	cur_word_progress:0,
-	word_progress_to_consume:0,
-	cur_bonus:0,
-
-	async activate(){
-
-		//меняем дизайн
-		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
-			objects.bcg.texture=gres.main_bcg2.texture;
-			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
-		});
-
-
-		//если это первый раз в игре
-		//if (my_data.first_log)
-		{
-			await anim2.add(objects.q2_tutorial,{x:[M_WIDTH,0]}, true, 0.5,'linear');
-			//ждем нажатия кнопки
-			await new Promise(res=>{this.action_resolver=res})
-			anim2.add(objects.q2_tutorial,{x:[0,-M_WIDTH]}, false, 0.5,'linear');
-		}
-
-		this.on=1;
-
-		//переназначаем кнопку шафл
-		objects.shuffle.pointerdown=function(){quiz2.reset()};
-		objects.exit_btn.pointerdown=function(){quiz2.exit_btn_down()};
-
-		//кнопка проверки слова
-		objects.check_word_btn.visible=true;
-		objects.check_word_btn.pointerdown=this.check_word.bind(this)		
-		objects.t_quiz2_info.visible=true;
-		objects.t_quiz2_info.text='';		
-		
-		//кнопка подсказки не нужна
-		objects.hint_button_cont.visible=false;		
-
-		this.keep_alive_timer=setInterval(function(){quiz2.keep_alive()},45000);
-		quiz2.keep_alive();
-		anim2.add(objects.players_icons_cont,{y:[-200,0]}, true, 0.4,'linear');
-
-		objects.letter_buttons.forEach(l=>{l.bcg.texture=gres.big_letter2_bcg.texture;l.visible=false;l.interactive=true;l.pointerdown=this.letter_down});
-		objects.game_cont.visible=true
-		objects.crossword_cont.visible=false
-		objects.letters_area_bcg.visible=false
-
-		//загружаем игроков
-		console.log('загружаем комнату...')
-		game.set_loading(1);
-		const players=await fbs_once('room2/players');
-		await this.update_players(players);
-		game.set_loading(0);
-		console.log('загружено!')
-
-		this.show_letters();
-
-		//подписываемся на изменения игроков
-		fbs.ref('room2/players').on('value',function(data){
-			quiz1.update_players(data.val())
-		})
-
-		//подписываемся на события комнаты
-		fbs.ref('room2/events').on('value',function(data){
-			quiz2.game_events(data.val())
-		})
-
-		//подписываемся на новый кроссворд
-		fbs.ref('room2/new_cw').on('value',function(data){
-			quiz2.game_events(data.val())
-		})
-
-
-	},
-
-	process(){
-
-		const tm=Date.now();
-		let sec_left=(100-(tm-this.start_time)*0.001)/100;
-		sec_left=Math.min(sec_left,1);
-		sec_left=Math.max(sec_left,0);
-		objects.q2_timer_slider.x=objects.q2_timer_slider.sx-350*(1-sec_left);
-		objects.q2_timer_t.text=Math.floor(sec_left*100);
-
-		this.update_word_progress_bar();
-
-	},
-
-	game_events(event){
-
-		//console.log(event);
-
-		if (event.event==='NEW_CW'){
-			//console.log(event);
-			//определяем бонус
-			this.reset();
-			this.cur_bonus=event.num_of_players*2;
-			this.start_game(event.quiz_data);
-		}
-
-		if (!this.init_skipped){
-			this.init_skipped=1;
-			return;
-		}
-
-		if (event.event==='PREPARE'){
-
-
-			//определяем бонус
-			this.cur_bonus=event.num_of_players>1?event.num_of_players*2:0
-			objects.t_ready_bonus.text=this.cur_bonus;
-			sound.play('get_ready');
-
-			if (objects.winner_cont.visible){
-				anim3.add(objects.winner_cont,{alpha:[1,0.2,'linear'],scale_xy:[1,0.2,'easeInBack'],angle:[0,-700,'easeInBack']}, false, 0.75);
-			}
-
-
-			objects.players_icons.forEach(icon=>{
-				if (icon.visible){
-					icon.solved_num=0;
-					icon.t_solved.text=0;
-				}
-			})
-
-			objects.t_players_online.text=`Игроков онлайн: ${event.num_of_players}`;
-			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);
-
-
-			this.reset();
-
-			quiz1.update_icons();
-		}
-
-		if (event.event==='PROGRESS'){
-			const player_icon=objects.players_icons.find(i=>i.uid===event.uid)
-			//console.log(event);
-
-			if (player_icon){
-				sound.play('progress');
-				player_icon.solved_num=event.solved_num;
-				player_icon.t_solved.text=event.solved_num;
-				player_icon.make_progress_hl();
-				quiz1.update_icons();
-			}
-		}
-
-		if (event.event==='WINNER'){
-			this.game_end(event.uid);
-		}
-
-
-	},
-
-	start_game(word){
-
-		objects.winner_cont.visible=false;
-		objects.shuffle.visible=true;
-		if (objects.ready_cont.visible)
-			anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
-
-		//таймер
-		objects.q2_timer_cont.visible=true
-		objects.q2_timer_slider.x=objects.q2_timer_slider.sx
-		objects.q2_words.text='';	
-
-		//двигаем и показываем игровое поле
-		anim2.add(objects.game_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');
-		objects.players_icons.forEach(i=>i.solved_num=0);
-
-		some_process.q2=function(){quiz2.process()};
-		
-		//контейнер набранных слов (инициализация)
-		objects.q2_bonus_cont.visible=true
-		objects.q2_bonus_slider.x=objects.q2_bonus_slider.sx-175
-				
-		//прогресс набранных слов
-		this.cur_word_progress=0
-		
-		this.start_time=Date.now();
-		this.added_words=[];
-		this.word=word;
-		this.show_letters();
-
-	},
-
-	async game_end(winner_uid){
-
-		await this.drop_letters();
-		//objects.shuffle.visible=false;
-		//objects.hint_button_cont.visible=false;
-		some_process.q2=function(){};
-
-		anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.4,'linear');
-
-		if (winner_uid==='NO_WINNER') return;
-
-		const start_tm=Date.now();
-		const winner_rating=await fbs_once('players/'+winner_uid+'/PUB/rating');
-		const winner_data=players_cache.players[winner_uid];
-		const db_tm=Date.now()-start_tm;
-		const wait_tm=Math.max(2,1000-db_tm);
-
-		await new Promise(resolve=> {setTimeout(resolve, wait_tm);});
-
-		objects.winner_avatar.set_texture(winner_data.texture)
-		objects.t_winner_name.text=winner_data.name;
-		objects.t_winner_rating.text=winner_rating;
-
-		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
-		sound.play('winner');
-
-		//вспышка
-		let anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=M_WIDTH*0.5;
-			anim_obj.y=M_HEIGHT*0.5;
-			anim_obj.texture=gres.stars_net_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
-		//обновляем рейтинг на карточке
-		await new Promise(resolve=> {setTimeout(resolve, 1000);});
-		objects.t_winner_rating.text=winner_rating+this.cur_bonus;
-		if (winner_uid===my_data.uid){
-			my_data.rating+=this.cur_bonus;
-			fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);
-		}
-
-		anim2.add(objects.t_winner_rating,{scale_xy:[1,1.5]}, true, 1.5,'ease2back');
-
-		//вспышка
-		anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=220;
-			anim_obj.y=490;
-			anim_obj.texture=gres.white_orb_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
-	},
-
-	async drop_letters(){
-
-
-		for (let i=0;i<10;i++){
-			const letter=objects.letter_buttons[i];
-			const anim_object=objects.anim_objects.find(o=>o.visible===false);
-			letter.visible=false;
-			if (anim_object){
-				anim_object.texture=gres.bubbles_img.texture;
-				anim_object.x=letter.x;
-				anim_object.y=letter.y;
-				sound.play('bubble');
-				await anim2.add(anim_object,{scale_xy:[0.166, 0.8],alpha:[0.9,0]}, false, 0.15,'linear');
-			}
-			//anim2.add(letter,{y:[letter.y,800]}, false, 0.5,'easeInBack');
-			//anim2.add(objects.anim_frame3,{scale_xy:[0.666, 1],alpha:[0.9,0]}, false, 3,'linear');
-
-		}
-
-	},
-
-	reset(){
-
-		anim2.add(objects.shuffle,{scale_xy:[0.666,0.5]}, true, 0.15,'ease2back')
-
-		objects.typing_word.text='';
-		objects.typing_word_bcg.visible=false;
-		objects.letter_buttons.forEach(l=>{l.checked=0;l.bcg.tint=0xffffff;l.hl.visible=false});
-		game.letters_seq=[];
-
-	},
-
-	letter_down(e){
-
-		if (this.checked){
-			sound.play('locked');
-			anim2.add(this,{x:[this.x,this.x+5]}, true, 0.15,'shake');
-			return;
-		}
-
-		if (objects.typing_word.text.length===6){
-			objects.t_quiz2_info.text='Не более 6 букв!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
-			sound.play('locked');
-			return;
-		}
-
-
-		sound.play('button'+objects.typing_word.text.length);
-		anim3.add(this,{scale_xy:[0.6,0.8,'ease2back']}, true, 0.15);
-
-		this.hl.visible=true;
-		game.add_letter(this.letter_text);
-		this.bcg.tint=0xff00ff;
-		game.letters_seq.push(this);
-		this.checked=1;
-
-	},
-
-	async update_players(uid_data){
-
-		//обновляем данные об игроках
-		for (let uid in uid_data){
-			await players_cache.update(uid);
-
-			const active_icon=objects.players_icons.find(i=>{return i.visible&&i.uid===uid});
-
-			if (!active_icon){
-				const num_of_icons=objects.players_icons.filter(i=>i.visible).length;
-				const free_icon=objects.players_icons.find(i=>i.visible===false);
-				free_icon.x=6.667+num_of_icons*86.667;
-				free_icon.visible=true;
-				free_icon.uid=uid;
-				free_icon.t_solved.text=0;
-				const pname=players_cache.players[uid].name.split(' ')[0];
-				free_icon.t_name.set2(pname,75);
-				free_icon.avatar.set_texture(players_cache.players[uid].texture);
-				free_icon.place=num_of_icons;
-				if (uid===my_data.uid)
-					free_icon.t_name.tint=0x0033ff;
-				else
-					free_icon.t_name.tint=0xffffff;
-			}
-		}
-
-		//убираем пропавших
-		objects.players_icons.forEach(icon=>{
-			if (icon.visible){
-				if (!uid_data[icon.uid])
-					icon.visible=false;
-			}
-		})
-
-		quiz1.update_icons();
-
-
-	},
-
-	good_word_found(){
-
-
-		objects.q2_words.text=objects.q2_words.text+objects.typing_word.text+' ';
-
-		//буквы летят на места
-		for (let i=0;i<game.letters_seq.length;i++){
-
-			const letter_button=game.letters_seq[i];
-			const fly_letter=objects.fly_letters[i];
-
-			const sx=letter_button.x;
-			const sy=letter_button.y;
-			const s_angle=letter_button.angle;
-			fly_letter.set_letter(letter_button.letter_text);
-
-			fly_letter.x=sx;
-			fly_letter.scale_xy=letter_button.scale_xy;
-
-			anim2.add(fly_letter,{y:[sy,280],alpha:[1,0],angle:[s_angle,irnd(-20,20)]}, false, 0.5,'linear');
-
-		}
-
-		//дополнительная анимация доски - звездочки вокруг каждой буквы
-		for (let i=0;i<game.letters_seq.length;i++){
-			const letter_object=game.letters_seq[i];
-			const flash=objects.flashes.find(f=>f.visible===false);
-			flash.x=letter_object.x;
-			flash.y=letter_object.y;
-			flash.angle=irnd(0,360);
-			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear',false);
-		}
-
-		sound.play('word_open0');
-
-	},
-
-	show_letters() {
-
-		//скрвываем сначала все буквы
-		objects.letter_buttons.forEach(l=>l.visible=false);
-
-		const WORDS_NUM=5;
-		const SIDE_MARGIN=50;
-		const L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/WORDS_NUM;
-
-		//располагаем кнопки-буквы
-		for (let i=0;i<this.word.length;i++){
-			const letter_object=objects.letter_buttons[i];
-			letter_object.visible=true;
-
-			const tar_y=i>4?623:557;
-			const cur_i=i>4?i-5:i;
-			const tar_x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*cur_i;
-
-			letter_object.set_letter(this.word[i]);
-			letter_object.scale_xy=0.6;
-			letter_object.angle=irnd(-2,2);
-			letter_object.bcg.tint=0xffffff;
-			letter_object.checked=0;
-			letter_object.alpha=1;
-
-			anim2.add(letter_object,{y:[800,tar_y],x:[0,tar_x]}, true, 0.5,'easeOutBack');
-		}
-
-		sound.play('start_level')
-
-		//подчищаем что могло остаться
-		objects.letters_area_bcg.interactive=true;
-		objects.letter_connect_graph.clear();
-		objects.letter_buttons.forEach(l=>{l.checked=0;l.hl.visible=false});
-
-	},
-
-	check_word(){
-
-		if (!all_words[objects.typing_word.text]){
-			objects.t_quiz2_info.text='Такого слова нет в словаре!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
-			anim2.add(objects.check_word_btn,{x:[objects.check_word_btn.x,objects.check_word_btn.x+5]}, true, 0.15,'shake');
-			sound.play('locked');
-			this.reset();
-			return;
-		}
-
-		if (this.added_words.includes(objects.typing_word.text)){
-			objects.t_quiz2_info.text='Такое слово уже называли!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
-			anim2.add(objects.check_word_btn,{x:[objects.check_word_btn.x,objects.check_word_btn.x+5]}, true, 0.15,'shake');
-			sound.play('locked');
-			this.reset();
-			return;
-		}
-
-		
-		
-		//слово подходит
-
-		this.added_words.push(objects.typing_word.text);
-		this.good_word_found();
-
-		const w_len=objects.typing_word.text.length;
-		//3 - 3
-		//4 - 4
-		//5 - 6
-		//6 - 7
-		const w_len_to_conusme={3:3,4:4,5:6,6:7};
-		this.word_progress_to_consume=w_len_to_conusme[w_len];
-		
-		anim3.add(objects.check_word_btn,{alpha:[0.25,1,'linear'],scale_xy:[0.666,0.5,'ease2back']}, true, 0.5,false);
-		this.reset();
-
-	},
-
-	update_word_progress_bar(){
-
-		if (this.word_progress_to_consume<=0) return;
-
-		this.word_progress_to_consume-=0.2;
-		this.cur_word_progress+=0.2;
-
-		if (this.cur_word_progress>=6.99){
-			this.cur_word_progress=0;
-
-			fbs.ref('room2/players_events').set({uid:my_data.uid,solved_num:1,tm:Date.now()});
-
-			//показываем вспышку1
-			anim3.add(objects.q2_bonus_icon,{scale_xy:[0.666,1.2,'ease2back'],angle:[0,10,'shake']}, true, 0.25);
-
-		}
-
-		if (this.word_progress_to_consume<=0){
-			this.word_progress_to_consume=0;
-			this.cur_word_progress=Math.round(this.cur_word_progress);
-		}
-
-		const unit_progress=this.cur_word_progress/7
-		objects.q2_bonus_slider.x=objects.q2_bonus_slider.sx-173*(1-unit_progress)
-
-
-	},
-
-	exit_btn_down(){
-		if (anim2.any_on()||anim3.any_on()) return;
-
-		sound.play('click');
-		this.close();
-		main_menu.activate();
-
-	},
-
-	close(){
-
-		this.on=0;
-
-
-		//отключаем файербейс
-		fbs.ref('room2/players').off()
-		fbs.ref('room2/events').off()
-		fbs.ref('room2/new_cw').off()
-		fbs.ref('room2/players/'+my_data.uid).remove()
-
-		objects.q2_timer_cont.visible=false;
-
-		some_process.q2=function(){};
-
-
-		objects.letter_buttons.forEach(l=>{l.interactive=false});
-
-		objects.crossword_cont.visible=true;
-		objects.letters_area_bcg.visible=true;
-		objects.check_word_btn.visible=false;
-		objects.ready_cont.visible=false;
-		objects.winner_cont.visible=false;
-		objects.q2_bonus_cont.visible=false
-		anim2.add(objects.players_icons_cont,{y:[0,-200]}, false, 0.4,'linear');
-		anim2.add(objects.game_cont,{alpha:[1,0],x:[0,-440]}, false, 0.4,'linear');
-		clearInterval(this.keep_alive_timer);
-
-	},
-
-	keep_alive(){
-
-		//загружаем мои данные в комнату
-		fbs.ref('room2/players/'+my_data.uid).set(firebase.database.ServerValue.TIMESTAMP);
-
-	},
-
-}
-
-quiz3={
-
-	word:'ОРАНГУТАНГИЕ',
-	keep_alive_timer:0,
-	cur_bonus:0,
-	start_bonus:0,
-	start_tm:0,
-	hide_ws_timer:0,
-	next_hint_tm:10,
-	data:[],
-	skip_first_event:0,
-		
-	async activate(){
-
-		this.keep_alive_timer=setInterval(function(){quiz3.keep_alive()},45000);
-		this.keep_alive()
-
-		//показываем статус игры
-		const state=await fbs_once('room3/state');
-		if(state) this.place_word(state.q_id)
+grid={
 	
-
-		//меняем дизайн
-		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
-			objects.bcg.texture=gres.main_bcg2.texture;
-			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
-		});
-
-		anim2.add(objects.players_icons_cont,{y:[-200,0]}, true, 0.4,'linear');
-
-		objects.letter_buttons.forEach(l=>{
-			l.bcg.texture=gres.big_letter2_bcg.texture;
-			l.visible=false;
-			l.interactive=true;
-			l.pointerdown=this.letter_down
-		});
-		anim2.add(objects.game_cont,{x:[M_WIDTH,0]}, true, 0.5,'linear');
-		objects.letters_area_bcg.visible=false;
-
-		//кнопка проверки слова
-		objects.check_word_btn.visible=true;
-		objects.check_word_btn.pointerdown=this.check_word.bind(this)
-		
-		//кнопка выхода
-		objects.exit_btn.visible=true
-		objects.exit_btn.x=0
-		objects.exit_btn.pointerdown=function(){quiz3.exit_btn_down()};
-		
-		//убираем то что не видно
-		objects.shuffle.visible=false
-		objects.hint_button_cont.visible=false
-		objects.t_quiz2_info.visible=true
-		objects.t_quiz2_info.text=''
-		
-		objects.q2_words.text=''
-		objects.q2_words.visible=true
-		
-		//бонус
-		this.cur_bonus=state.b
-		objects.t_q3_bonus.text=state.b
-		anim3.add(objects.q3_bonus_cont,{alpha:[0,1,'linear'],scale_xy:[0,1,'easeOutBack']}, true, 0.25)
-		
-		//лампа подсказка
-		//objects.lamp_cont.visible=true
-		//objects.lamp_cont.scale_xy=0.5
-		//objects.lamp_cont.x=400
-		//objects.lamp_cont.y=370
-		
-		
-		this.start_tm=Date.now()
-		
-		if(state) this.show_keyboard(state)
-
-		//подписываемся на изменения игроков
-		fbs.ref('room3/players').on('value',function(data){
-			quiz3.update_players(data.val())
-		})
-
-		//подписываемся на события комнаты
-		this.skip_first_event=0
-		fbs.ref('room3/events').on('value',(data)=>{			
-			quiz3.game_events(data.val())
-		})
+	size_x:0,
+	size_y:0,
+	grid:[],
+	paths:[],
+	dirs:[[0,1],[1,0],[0,-1],[-1,0]],
 	
+	shuffle(arr){
 
+		let currentIndex = arr.length;
+
+		// While there remain elements to shuffle...
+		while (currentIndex != 0) {
+			// Pick a remaining element...
+			let randomIndex = Math.floor(Math.random() * currentIndex);
+			currentIndex--;
+
+			// And swap it with the current element.
+			[arr[currentIndex], arr[randomIndex]] = [
+			arr[randomIndex], arr[currentIndex]];
+		}
 	},
 	
-	update_hint_timer(){
+	get_grid_zeros(){
 		
-		if (!objects.lamp_cont.visible)
-			anim2.add(objects.lamp_cont,{alpha:[0,1]}, true, 0.5,'linear');
-		
-		const hints_num=objects.letter_buttons.filter(o=>{return o.visible&&o.alpha===0.5}).length
-		this.start_tm=Date.now()
-		this.next_hint_tm=[15,15,15,30,30,30,50,50,50,50][hints_num]
-		//console.log(this.next_hint_tm)
-		objects.lamp_mask.width=1
-		anim2.add(objects.lamp_icon,{angle:[0,-10]}, true, 0.25,'shake');
-		
-		if (hints_num>=7){
-			objects.lamp_mask.width
-			some_process.q3=function(){}			
-		}		
-	},
-
-	update_icons(){
-
-		const vis_icons=objects.players_icons.filter(i=>i.visible);
-		const icons_sorted=vis_icons.sort((a,b) =>  b.solved_num - a.solved_num);
-
-		for(let i=0;i<icons_sorted.length;i++){
-
-			const player_icon=icons_sorted[i];
-			if (player_icon.visible===false)
-				continue;
-
-			player_icon.place=i;
-
-			const cx=player_icon.x;
-			const tx=6.667+player_icon.place*86.667;
-			if(cx!==tx)
-				anim2.add(player_icon,{x:[cx,tx]}, true, 0.15,'linear',false);
-		}
-
-	},
-
-	async update_players(uid_data){
-
-		//обновляем данные об игроках
-		for (let uid in uid_data){
-			await players_cache.update(uid);
-
-			const active_icon=objects.players_icons.find(i=>{return i.visible&&i.uid===uid});
-
-			if (!active_icon){
-				const num_of_icons=objects.players_icons.filter(i=>i.visible).length;
-				const free_icon=objects.players_icons.find(i=>i.visible===false);
-				free_icon.x=6.667+num_of_icons*86.667;
-				free_icon.visible=true;
-				free_icon.uid=uid;
-				free_icon.t_solved.text=0;
-				const pname=players_cache.players[uid].name.split(' ')[0];
-				free_icon.t_name.set2(pname,75);
-				free_icon.avatar.set_texture(players_cache.players[uid].texture);
-				free_icon.place=num_of_icons;
-				if (uid===my_data.uid)
-					free_icon.t_name.tint=0x0033ff;
-				else
-					free_icon.t_name.tint=0xffffff;
-			}
-		}
-
-		//убираем пропавших
-		objects.players_icons.forEach(icon=>{
-			if (icon.visible){
-				if (!uid_data[icon.uid])
-					icon.visible=false;
-			}
-		})
-
-		this.update_icons();
-
-
-	},
-
-	process(){
-		
-		const tm=Date.now()
-		
-		let tar_tm=(tm-this.start_tm)*0.001/this.next_hint_tm
-				
-		tar_tm=Math.min(tar_tm,1)
-		tar_tm=Math.max(tar_tm,0)
-		objects.lamp_mask.width=120*tar_tm //от 80 до 30
+		let i=0
+		for (let y=0;y<this.size_y;y++)
+			for (let x=0;x<this.size_x;x++)
+				if (this.grid[y][x]===0)
+					i++
+		return i
 		
 	},
-
-	keep_alive(){
-
-		//загружаем мои данные в комнату
-		fbs.ref('room3/players/'+my_data.uid).set(firebase.database.ServerValue.TIMESTAMP);
-
-	},
-
-	check_word(){
+	
+	try_fill_zeros(){
 		
-		if (anim2.any_on()||anim3.any_on()){
-			sound.play('locked')
-			return
-		}
-		
-		sound.play('click')		
-		
-		//собираем слово
-		let word_to_check=''
-		for(let i=0;i<this.word.length;i++){
-			const let_obj=objects.letters_objects[i]
-			if (!let_obj.letter_sprite.visible){
-				objects.t_quiz2_info.text='Составьте слово!';
-				anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
-				anim2.add(objects.check_word_btn,{x:[objects.check_word_btn.x,objects.check_word_btn.x+10]},true,0.1,'shake');
-				sound.play('locked')
-				return
-			}
-				
-			word_to_check+=let_obj.letter_text
-		}
-		
-		//убираем введенные символы
-		for(let i=0;i<this.word.length;i++){
-			const let_obj=objects.letters_objects[i]
-			if (let_obj.opened===0)
-				let_obj.letter_sprite.visible=false
-		}
-
-		anim3.add(objects.check_word_btn,{alpha:[0.25,1,'linear']}, true, 1,false);
-		fbs.ref('room3/players_events').set({uid:my_data.uid,w:word_to_check,tm:Date.now()});
-		this.reset()
-	},
-
-	letter_down(e){
-
-		/*if (this.checked){
-			sound.play('locked');
-			anim2.add(this,{x:[this.x,this.x+5]}, true, 0.15,'shake');
-			return;
-		}*/
-
-		/*if (objects.typing_word.text.length===6){
-			objects.t_quiz2_info.text='Не более 6 букв!';
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false);
-			sound.play('locked');
-			return;
-		}*/
-
-		//печатаем слишком большое слово
-		/*if (objects.typing_word.text.length>=quiz3.word.length){
-			sound.play('locked')
-			return			
-		}*/
-		
+		for (let i=1;i<=this.paths.length;i++){
 			
-
-		//если слово уже готово и составлено
-		const all_filled=objects.letters_objects.filter(o=>o.visible).every(o=>o.letter_sprite.visible===true)
-		if (all_filled){
-			anim2.add(objects.check_word_btn,{scale_xy:[objects.check_word_btn.scale_xy,objects.check_word_btn.scale_xy*1.3]}, true, 0.2,'ease2back',false);
-			sound.play('locked');
-			return
-		}		
-		
-		if (this.alpha===0.5){
-			objects.t_quiz2_info.text='Этой буквы нет в слове!'
-			anim3.add(objects.t_quiz2_info,{alpha:[1,0,'linear']}, false, 5,false)
-			return
-		}
-		
-		//отправляем букву на первую которая не открыта
-		for (let i=0;i<quiz3.word.length;i++){
-			const let_obj=objects.letters_objects[i];
-			if (!let_obj.letter_sprite.visible){
-				let_obj.set_letter(this.letter_text)
-				let_obj.letter_sprite.visible=true
-				break
-			}			
-		}
-
-
-
-		sound.play('button1');
-		const cur_scale=this.scale_xy
-		anim3.add(this,{scale_xy:[cur_scale,cur_scale*1.2,'ease2back']}, true, 0.15);
-
-		//this.hl.visible=true;
-		//game.add_letter(this.letter_text);
-		//this.bcg.tint=0xff00ff;
-		//game.letters_seq.push(this);
-		//this.checked=1;
-
-	},
-
-	place_word(quiz_id){
-		
-		const word=this.data[quiz_id||0][0]
-		const desc=this.data[quiz_id||0][1]
-		//
-		anim3.add(objects.q3_quiz_info,{alpha:[0,1,'linear']}, true, 0.35);
-		objects.q3_quiz_info.text=desc
-				
-		//отображаем слово на доске
-		const LETTERS_IN_ROW=word.length;
-		const SIDE_MARGIN=15;
-		const L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/LETTERS_IN_ROW;
-		
-		//размещаем новое слово		
-		objects.letters_objects.forEach(l=>l.visible=false)
-		objects.crossword_cont.visible=true
-		objects.crossword_cont.x=0
-		objects.crossword_cont.y=0
-		objects.crossword_cont.scale_xy=1
-		
-		
-		this.word=word	
-		//от 5 до 10 слов
-		const tar_scl=0.6-0.15*(LETTERS_IN_ROW-5)*0.2
-		for (let x=0;x<LETTERS_IN_ROW;x++){
-			const l_obj=objects.letters_objects[x]
-			l_obj.x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*x;
-			l_obj.y=355
-			l_obj.scale_xy=tar_scl
-			l_obj.visible=true
-			l_obj.set_letter(word[x].toUpperCase())				
-			l_obj.set_as_holder()
-			l_obj.opened=0
-		}
+			const path=this.paths[i-1]
+			const path_len=path.length
 			
-		some_process.q3=function(){quiz3.process()}
-	},
-	
-	async show_word(){
-		
-		for (let i=0;i<this.word.length;i++){				
-			const let_obj=objects.letters_objects[i]
-			let_obj.open()				
-			await anim3.add(let_obj,{scale_xy:[let_obj.scale_xy,let_obj.scale_xy*1.2,'ease2back']}, true, 0.05);
-	
+			const sy=path[0][0]
+			const sx=path[0][1]
+			
+			const ey=path[path_len-1][0]
+			const ex=path[path_len-1][1]
+			
+			if (path_len>7) continue
+			
+			for (let dir of this.dirs){
+				
+				//проверяем соедние
+				ny=sy+dir[0]
+				nx=sx+dir[1]
+				
+				if (ny<0) continue
+				if (nx<0) continue
+				if (ny>this.size_y-1) continue
+				if (nx>this.size_x-1) continue
+				
+				//добавляем от начала
+				if (this.grid[ny][nx]===0){
+					path.unshift([ny,nx])
+					this.grid[ny][nx]=i
+					return
+				}
+
+				//проверяем соедние
+				ny=ey+dir[0]
+				nx=ex+dir[1]
+				
+				if (ny<0) continue
+				if (nx<0) continue
+				if (ny>this.size_y-1) continue
+				if (nx>this.size_x-1) continue
+				
+				//добавляем от конца
+				if (this.grid[ny][nx]===0){
+					path.push([ny,nx])
+					this.grid[ny][nx]=i
+					return
+				}
+			}
+			
 		}	
 		
 	},
-	
-	show_ws(e){
+
+
+	get_start_cell(){	
+			
+		if (this.paths.length===0){
+			const sy=irnd(0,this.size_y-1)
+			const sx=irnd(0,this.size_x-1)
+			return [sy,sx]
+		}
+				
+		let end_point=[]
 		
-		clearTimeout(this.hide_ws_timer)
-		const player=players_cache.players[e.uid]
-		if(!player||!player.name) return
-		let name=player.name
-		name=name.substring(0, 12)
-		sound.play('progress')
-		objects.q3_ws2.text=name+': '+e.ws
-		objects.q3_ws.text=name+':'
-		
-		//отображаем значек
-		if (e.win){
-			objects.q3_ws2.tint=0x00aa00			
-			objects.q3_ws_icon.texture=gres.ws_correct.texture
-		}else{
-			objects.q3_ws2.tint=0xaa0000
-			objects.q3_ws_icon.texture=gres.ws_wrong.texture
+		for(let i=0;i<100;i++){		
+
+			const rand_path=this.paths[irnd(0,this.paths.length-1)]
+			const dir=this.dirs[irnd(0,3)]
+			
+			//выбираем или начало или конец
+			if (Math.random()>0.5)
+				end_point=rand_path[0]
+			else
+				end_point=rand_path[rand_path.length-1]
+			
+			let sy=end_point[0]+dir[0]
+			let sx=end_point[1]+dir[1]
+			
+			if (sy<0) continue
+			if (sx<0) continue
+			if (sy>this.size_y-1) continue
+			if (sx>this.size_x-1) continue
+			if (this.grid[sy][sx]!==0) continue
+			
+			return [sy,sx]
+			
 		}
 		
-		//размещаем значек
-		objects.q3_ws_icon.x=objects.q3_ws2.width+20;
-		
-		//центруем
-		objects.q3_ws_cont.y=100
-		objects.q3_ws_cont.x=(M_WIDTH-objects.q3_ws_cont.width)*0.5
-		anim2.add(objects.q3_ws_cont,{alpha:[0,1]}, true, 0.5,'linear')		
-		this.hide_ws_timer=setTimeout(()=>{anim2.add(objects.q3_ws_cont,{alpha:[1,0]}, false, 0.5,'linear')},3000)
+		//console.log('НЕ НАШЛИ НАЧАЛЬНУЮ ЯЧЕЙКУ!!!')
+		return 999
 		
 	},
 	
-	show_keyboard(state) {
+	check_cell_in_path(cell,path){
 		
+		for (let path_point of path)
+			if (path_point[0]===cell[0]&&path_point[1]===cell[1])
+				return 1
+		return 0
 		
-		//добавляем в слово еще несколько букв и перемешываем
-		const word=this.data[state.q_id][0]
-		const _word_array=word.split('')
-		const uniqueSet = new Set(_word_array);
-		const unique_word_array = [...uniqueSet]
-		 
-
-		while(1){
-			
-			const random_letter=all_letters[irnd(0,30)]
-			if (!unique_word_array.includes(random_letter))
-				unique_word_array.push(random_letter)
-			
-			if (unique_word_array.length===13)
-				break
-		}
-		
-		
-		const word_array=Array.from(unique_word_array.sort(()=>0.5-Math.random()))
-
-		//скрвываем сначала все буквы
-		objects.letter_buttons.forEach(l=>{l.visible=false;l.alpha=1;l.angle=0});
-
-		let LETTERS_IN_ROW=5;
-		let SIDE_MARGIN=50;
-		let L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/LETTERS_IN_ROW;
-
-
-		//первый ряд
-		i=0
-		for (let x=0;x<5;x++){
-			const letter_object=objects.letter_buttons[i++];
-			letter_object.y=545
-			letter_object.x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*x;
-		}
-		
-		//второй ряд
-		for (let x=0;x<5;x++){
-			const letter_object=objects.letter_buttons[i++];
-			letter_object.y=600
-			letter_object.x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*x;
-		}
-
-		//третий ряд
-		LETTERS_IN_ROW=3;
-		SIDE_MARGIN=120;
-		L_WIDTH=(M_WIDTH-SIDE_MARGIN*2)/LETTERS_IN_ROW;
-		for (let x=0;x<LETTERS_IN_ROW;x++){
-			const letter_object=objects.letter_buttons[i++];
-			letter_object.y=655
-			letter_object.x=SIDE_MARGIN+L_WIDTH*0.5+L_WIDTH*x;
-		}
-
-		//располагаем кнопки-буквы
-		for (let i=0;i<13;i++){
-			const letter_object=objects.letter_buttons[i];
-			letter_object.visible=true;
-			letter_object.set_letter(word_array[i]);
-			letter_object.scale_xy=0.6;
-			//letter_object.angle=irnd(-2,2);
-			letter_object.bcg.tint=0xffffff;
-			letter_object.checked=0;
-		}
-
-		sound.play('start_level')
-		
-		objects.erase_btn.visible=true
-		//objects.erase_btn.x=384
-		//objects.erase_btn.y=680
-		//objects.erase_btn.scale_xy=0.48
-		objects.erase_btn.pointerdown=this.erase.bind(this)
-
-		//подчищаем что могло остаться
-		objects.letters_area_bcg.interactive=true;
-		objects.letter_connect_graph.clear();
-		objects.letter_buttons.forEach(l=>{l.checked=0;l.alpha=1;l.hl.visible=false});
-		
-		
-		//скрываем букву которой нет в слове
-		if(state.h){
-			for (let i=0;i<state.h;i++){
-				for (const letter_object of objects.letter_buttons){			
-					if (letter_object.visible&&letter_object.alpha===1){					
-						if (!this.word.includes(letter_object.letter_text)){
-							letter_object.alpha=0.5;
-							break;
-						}					
-					}				
-				}					
-			}		
-		}
 	},
 	
-	erase(){
+	get_next_cell(path){
+			
+		let ny=0
+		let nx=0
+		
+		this.shuffle(this.dirs)
+		
+		for(let i=0;i<4;i++){
+			
+			//выбираем следующую ячейку	
+			const dir=this.dirs[i]
+			const path_len=path.length
+			
+			//добавляем к концу
+			ny=path[path_len-1][0]+dir[0]
+			nx=path[path_len-1][1]+dir[1]
+			
+			if (ny<0) continue
+			if (nx<0) continue
+			if (ny>this.size_y-1) continue
+			if (nx>this.size_x-1) continue
+			
+			if (this.check_cell_in_path([ny,nx],path)) continue
+			if (this.grid[ny][nx]!==0) continue
+
+			return [ny,nx]
+		}
+		
+		//console.log('НЕ НАШЛИ СЛЕДУЮЩУЮ ЯЧЕЙКУ!!!')
+		return 999
+	},
+	
+	make_path(path_id,len=5){
+		
+		const cur_path=[]
+		
+		//определяем начальную ячейку
+		const res=this.get_start_cell()
+		if (res===999) return 0
+		const [cy,cx]=res
+		cur_path.push([cy,cx])
+		
+		//ищем дальше
+		for (let i=0;i<len-1;i++){
+			const res=this.get_next_cell(cur_path)
+			if (res===999) return 0
+			const [ny,nx]=res
+			cur_path.push([ny,nx])
+		}	
+		
+		//отображаем на поле
+		for (let point of cur_path)
+			this.grid[point[0]][point[1]]=path_id
+		
+		this.paths.push(cur_path)
+		
+		return 1
+	},
+	
+	make(size_y,size_x){
+		
+		this.size_y=size_y
+		this.size_x=size_x
+		const tar_num=Math.floor(size_x*size_y/5)
+		
+		for(z=0;z<1000;z++){
+				
+			this.paths=[]
+			this.grid = Array(size_y).fill().map(() => Array(size_x).fill(0))
+			
+			for (let p=1;p<=tar_num;p++){
+				
+				//пытаемся найти путь для змейки
+				for (let i=0;i<100;i++){
+					const tar_path_len=irnd(4,6)
+					if (this.make_path(p,tar_path_len))
+						break
+				}
+			}
+			
+			//заполняем пустоты
+			if (this.get_grid_zeros()<8){
+				for (let i=0;i<1000;i++){
+					this.try_fill_zeros()
+					if (this.get_grid_zeros()===0)
+						break
+				}
+			}
+
+			if (this.get_grid_zeros()===0)
+				return this.paths
+			
+		}		
+		
+	}
+	
+}
+
+quest={
+	
+	words:[],
+	my_path:[],	
+	cur_words:[],
+	drag_started:0,
+	grid_paths:[],
+	cur_word:'',
+	cur_progress:0,
+	cur_level:0,
+	on:0,
+	top3_updater:0,
+	top3_cache:{},
+	
+	async activate(){
 		
 		
-		anim3.add(objects.erase_btn,{scale_xy:[0.666,0.5,'ease2back']}, true, 0.15);
+		objects.quest_header_cont.visible=false
+		await anim3.add(objects.quest_cont,{x:[M_WIDTH,0,'linear']}, true, 0.5);
+		anim3.add(objects.quest_tutorial_bcg,{alpha:[0,1,'linear']}, true, 0.5);
+		anim3.add(objects.quest_header_cont,{y:[-300,objects.quest_header_cont.sy,'linear']}, true, 0.5);
+		objects.bcg.texture=gres.quest_bcg.texture
 		
-		//удаляем буквы
-		for (let i=quiz3.word.length-1;i>=0;i--){
-			const let_obj=objects.letters_objects[i];
-			if (!let_obj.opened&&let_obj.letter_sprite.visible){
-				let_obj.letter_sprite.visible=false
-				break
+		this.prepare_grid()
+		this.on=1
+		
+		let quest_data=safe_ls('word_game_quest')||{}
+		//quest_data=JSON.parse(quest_data)
+		
+		this.cur_progress=quest_data.progress||0
+		this.cur_level=quest_data.level||1		
+		
+		objects.quest_level_t.text='Уровень '+this.cur_level		
+		objects.quest_progress.text=this.cur_progress		
+		
+		this.update_top3()	
+		this.top3_updater=setInterval(()=>{
+			this.update_top3()			
+		},50000)
+
+	},
+	
+	next_down(){
+		
+		if (anim2.any_on()||anim3.any_on()) return
+		anim3.add(objects.quest_tutorial_bcg,{alpha:[1,0,'linear']}, false, 0.25);
+		
+	},
+	
+	async check_day_switch(){
+		
+		
+		//нужно удалит первую версию
+		
+		const SERVER_TM=await my_ws.get_tms()
+		const prv_tm=safe_ls('word_game_prv_tm')
+		
+		const cur_msk_day=+new Date(SERVER_TM).toLocaleString('en-US', {timeZone: 'Europe/Moscow',day:'numeric'})
+		const prv_msk_day=+new Date(prv_tm).toLocaleString('en-US', {timeZone: 'Europe/Moscow',day:'numeric'})
+		
+		if (cur_msk_day!==prv_msk_day){			
+			
+			//день поменялся начинаем заново
+			this.cur_progress=0
+			this.cur_level=0
+			safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level})
+			
+		}	
+
+		safe_ls('word_game_prv_tm',SERVER_TM)
+		
+		setTimeout(()=>{this.check_day_switch()},60000)
+	},
+	
+	async update_top3(){
+		
+		const top3=await my_ws.get('day_top3')
+		if(!top3) return
+		const uids=Object.keys(top3)
+		if (uids.length!==3) return
+		
+		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
+		const ordered_uids = [sorted_top3[1][0], sorted_top3[0][0], sorted_top3[2][0]]
+		
+		for (let i=0;i<3;i++){
+			
+			await players_cache.update(ordered_uids[i])		
+			objects.quest_top3_names[i].set2(players_cache.players[ordered_uids[i]].name,70)			
+				
+			await players_cache.update_avatar(ordered_uids[i])		
+			objects.quest_top3_avatars[i].set_texture_rect(players_cache.players[ordered_uids[i]].texture)
+			
+			objects.quest_top3_progress[i].text=top3[ordered_uids[i]]
+		}
+	
+	},
+	
+	prepare_grid(){
+		
+		this.cur_words=[]
+		
+		const left_margin=70
+		const grid_size=6
+		const x_step=(M_WIDTH-left_margin*2)/(grid_size-1)
+		
+		let i=0
+		for (let y=0;y<6;y++){
+			for (let x=0;x<6;x++){
+				
+				objects.quest_letters[i].x=x*x_step+left_margin
+				objects.quest_letters[i].y=y*x_step+240
+				objects.quest_letters[i].width=x_step*1.3
+				objects.quest_letters[i].height=x_step*1.3
+				objects.quest_letters[i].bcg.tint=0xffffff
+				objects.quest_letters[i].opened=0
+				objects.quest_letters[i].checked=0
+				objects.quest_letters[i].visible=true
+				i++
+			}
+		}
+		
+		this.grid_paths=grid.make(6,6)
+		
+		for (const path of this.grid_paths){
+			
+			const path_len=path.length
+			const words_db=this.words[path_len]
+			const word_to_place=words_db[irnd(0,words_db.length-1)]			
+			this.cur_words.push(word_to_place)
+			for (let i=0;i<path_len;i++){
+				
+				const y=path[i][0]
+				const x=path[i][1]
+				const letter=word_to_place[i]
+				objects.quest_letters[y*6+x].gy=y
+				objects.quest_letters[y*6+x].gx=x
+				objects.quest_letters[y*6+x].set_letter(letter)
+			}
+		}
+		
+		
+		
+	},
+	
+	comp_2_paths(path1,path2){
+		
+		if (path1.length!==path2.length) return 0
+		
+		for (let i=0;i<path1.length;i++){
+			
+			const cur_point=path1[i]
+			const my_point=path2[i]
+			
+			if (cur_point[0]!==my_point[0])
+				return 0
+			
+			if (cur_point[1]!==my_point[1])
+				return 0
+		}
+		
+		return 1	
+		
+	},
+	
+	check_path(path_to_check){
+		
+		for (const path of this.grid_paths){
+			
+			if (path.length!==path_to_check.length)
+				continue
+				
+			if (!this.comp_2_paths(path,path_to_check))
+				continue
+			
+			return 1
+		}
+		
+		return 0
+	},
+	
+	check_finished(){
+		
+		for (let y=0;y<6;y++)
+			for (let x=0;x<6;x++)
+				if (!objects.quest_letters[y*6+x].opened)
+					return 0
+		return 1
+		
+	},
+	
+	async switch_to_next(){		
+		
+		
+		//показываем вспышку
+		const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
+		anim_obj3.texture=gres.stars3_img.texture;
+		anim_obj3.x=220;
+		anim_obj3.y=375;
+		anim_obj3.angle=0;
+		anim_obj3.scale_xy=1;
+		anim3.add(anim_obj3,{alpha:[0,1,'ease2back'],scale_xy:[0.666,1,'easeOutBack'],angle:[0,40,'linear']}, false, 3);
+		
+		
+		sound.play('win')
+		await anim3.add(objects.quest_letters_cont,{x:[0,-M_WIDTH,'linear']}, true, 0.5);
+		this.prepare_grid()
+		
+		//увеличиваем уровень и сохраняем его
+		this.cur_level++;
+		objects.quest_level_t.text='Уровень '+this.cur_level		
+		this.save_progress()
+		
+		await anim3.add(objects.quest_letters_cont,{x:[M_WIDTH,0,'linear']}, true, 0.5);
+		this.on=1
+
+	},
+	
+	add_progress(progress){
+
+		this.cur_progress+=progress
+		objects.quest_progress.text=this.cur_progress
+		
+	},
+	
+	header_down(){
+	
+		message.add('Пока недосупно(((')
+		
+	},
+	
+	save_progress(){
+		
+		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level})
+		my_ws.safe_send({cmd:'top3',path:'_day_top3',val:{uid:my_data.uid,val:this.cur_progress}})
+	},
+		
+	process_opened_word(word_path){
+		
+		sound.play('word_open')
+		
+		//меняем цвет
+		word_path.forEach(point=>{
+			objects.quest_letters[point[0]*6+point[1]].opened=1
+			objects.quest_letters[point[0]*6+point[1]].bcg.tint=0xaabb99
+		})
+			
+			
+		//дополнительная анимация доски - звездочки вокруг каждой буквы
+		for (let i=0;i<word_path.length;i++){
+			
+			const cy=word_path[i][0]
+			const cx=word_path[i][1]
+			const letter_obj=objects.quest_letters[cy*6+cx]
+			const flash=objects.flashes.find(f=>f.visible===false)
+			flash.x=letter_obj.x
+			flash.y=letter_obj.y
+			flash.angle=irnd(0,360);
+			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear',false);
+		}		
+		
+		let i=0
+		const tx=objects.quest_progress_cont.x
+		const ty=objects.quest_progress_cont.y	
+		
+		const stars_timer=setInterval(()=>{
+			
+			const cy=word_path[i][0]
+			const cx=word_path[i][1]
+			const letter_obj=objects.quest_letters[cy*6+cx]
+			const star=objects.anim_objects.find(f=>f.visible===false)
+			const sx=letter_obj.x
+			const sy=letter_obj.y
+			star.texture=gres.star_img.texture
+			anim3.add(star,{x:[sx, tx,'easeOutBack'],y:[sy,ty,'linear'],scale_xy:[1.5,0.4,'linear'],alpha:[1,0.3,'linear']}, false, 0.5).then(()=>{
+				this.add_progress(1)
+				sound.play('word_open0')
+			})
+			i++
+			
+			if (i===word_path.length)
+				clearInterval(stars_timer)				
+
+		},150)
+		
+		
+		if (this.check_finished()){
+			this.on=0
+			setTimeout(()=>{
+				this.switch_to_next()	
+			},1000)	
+		}
+				
+	},
+	
+	drag_finished(){
+		
+		this.drag_started=0
+		if (this.check_path(this.my_path)){
+			
+			this.process_opened_word(this.my_path)
+			return
+		}else{			
+			if (this.cur_words.includes(this.cur_word))
+				message.add('Попробуйте найти это слово по другому)))')
+		}
+		
+		//sound.play('decline')
+		
+		//восстанавливаем текущую линию
+		this.my_path.forEach(point=>{
+			objects.quest_letters[point[0]*6+point[1]].bcg.tint=0xffffff
+			objects.quest_letters[point[0]*6+point[1]].checked=0
+		})
+
+	},
+	
+	exit_btn_down(){
+		if (anim2.any_on()||anim3.any_on()) return
+		this.close()
+		main_menu.activate()
+		
+	},
+		
+	get_letter_obj(my,mx,rad){
+		
+		let min_dist=9999
+		let min_obj=0
+		
+		for (let letter_obj of objects.quest_letters){
+			
+			if (!letter_obj.visible) continue
+			
+			const dy=letter_obj.y-my
+			const dx=letter_obj.x-mx
+			const d=Math.sqrt(dx*dx+dy*dy)
+			if (d<rad){
+				if (d<min_dist){
+					min_obj=letter_obj
+					min_dist=d
+				}								
 			}			
 		}
 		
+		return min_obj		
 		
 	},
 
-	game_events(e){
-
-		//console.log(e);
-		if(this.skip_first_event===0){
-			this.skip_first_event=1
-			return
-		}
-
-		if (!e)
-			return
-
-		if (e.prepare){
-
-
-			//определяем бонус
-			this.cur_bonus=e.num_of_players>1?e.num_of_players*2:0
-			this.start_bonus=this.cur_bonus
-			objects.t_ready_bonus.text=this.cur_bonus
-			objects.t_q3_bonus.text=this.cur_bonus
-			sound.play('get_ready');
-
-			if (objects.winner_cont.visible){
-				anim3.add(objects.winner_cont,{alpha:[1,0.2,'linear'],scale_xy:[1,0.2,'easeInBack'],angle:[0,-700,'easeInBack']}, false, 0.75);
-			}
-
-
-			objects.players_icons.forEach(icon=>{
-				if (icon.visible){
-					icon.solved_num=0;
-					icon.t_solved.text=0;
-				}
-			})
-
-			objects.t_players_online.text=`Игроков онлайн: ${e.num_of_players}`;
-			anim3.add(objects.ready_cont,{alpha:[0,1,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.75);
-
-
-			this.reset();
-
-			quiz3.update_icons();
-		}
-
-		if (e.q_id){
-			if (objects.ready_cont.visible)
-				anim3.add(objects.ready_cont,{alpha:[1,0,'linear'],scale_xy:[1,0.2,'easeInBack']}, false, 0.35);
-			this.place_word(e.q_id)			
-			this.show_keyboard(e)
-			this.update_hint_timer()
-		}
-
-		if (e.ws){
-			//показываем и проверяем слово
-			if(e.win)
-				this.game_end(e.uid)
-			
-			this.show_ws(e)
-			
-		}
-
-		if (e.b) {
-				
-			//console.log('BONUS:',e.b)
-			//бонус
-			this.cur_bonus=this.start_bonus+e.b
-			objects.t_q3_bonus.text=this.cur_bonus
-			anim3.add(objects.q3_bonus_cont,{scale_xy:[0,1,'easeOutBack']}, true, 0.25)
-			
-		}
+	area_move(e){
 		
-		if (e.h){
-						
-			//скрываем букву которой нет в слове (первую найденную)
-			for (const letter_object of objects.letter_buttons){			
-				if (letter_object.visible&&letter_object.alpha===1){					
-					if (!this.word.includes(letter_object.letter_text)){
-						letter_object.alpha=0.5;
-						break;
-					}					
-				}				
-			}
-			
-			sound.play('hint')
-			
-			//активируем лампу ожидания следующей подсказки
-			this.update_hint_timer()
-			
-		}
-
-	},
-
-	async game_end(winner_uid){
-
-		//await this.drop_letters();
-		//objects.shuffle.visible=false;
-		//objects.hint_button_cont.visible=false;
-		//some_process.q2=function(){};
-
-		//anim2.add(objects.game_cont,{x:[0,-M_WIDTH]}, false, 0.4,'linear');
-
-		//if (winner_uid==='NO_WINNER') return;
+		if (!this.on) return
+		if (!this.drag_started) return
+		const mx = e.data.global.x/app.stage.scale.x
+		const my = e.data.global.y/app.stage.scale.y		
 		
-		this.show_word()
-
-		const start_tm=Date.now();
-		const winner_rating=await fbs_once('players/'+winner_uid+'/PUB/rating');
-		const winner_data=players_cache.players[winner_uid];
-		const db_tm=Date.now()-start_tm;
-		const wait_tm=Math.max(2,1000-db_tm);
-
-		await new Promise(resolve=> {setTimeout(resolve, wait_tm);});
-
-		objects.winner_avatar.set_texture(winner_data.texture)
-		objects.t_winner_name.text=winner_data.name;
-		objects.t_winner_rating.text=winner_rating;
-
-		anim3.add(objects.winner_cont,{alpha:[0,1,'linear'],angle:[-10,0,'linear'],scale_xy:[0.6,1,'easeOutBack']}, true, 0.45);
-		sound.play('winner');
-
-		//вспышка
-		let anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=M_WIDTH*0.5;
-			anim_obj.y=M_HEIGHT*0.5;
-			anim_obj.texture=gres.stars_net_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
-		//обновляем рейтинг на карточке
-		await new Promise(resolve=> {setTimeout(resolve, 1000);});
-		objects.t_winner_rating.text=winner_rating+this.cur_bonus;
-		if (winner_uid===my_data.uid){
-			my_data.rating+=this.cur_bonus;
-			fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);
-		}
-
-		anim2.add(objects.t_winner_rating,{scale_xy:[1,1.5]}, true, 1.5,'ease2back');
-
-		//вспышка
-		anim_obj=objects.anim_objects.find(o=>!o.visible);
-		if (anim_obj){
-			anim_obj.x=220;
-			anim_obj.y=490;
-			anim_obj.texture=gres.white_orb_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0],scale_xy:[0.5,1.5]}, false, 1.5,'linear');
-		}
-
+		const obj=this.get_letter_obj(my,mx,objects.quest_letters[0].width*0.5)
+		if (!obj) return
+		if (obj.checked) return
+		sound.play('button0')
+		console.log('letter_checked_on_move',obj.letter_text)
+		obj.checked=1
+		obj.bcg.tint=0xff99ff
+		this.my_path.push([obj.gy,obj.gx])
+		this.cur_word+=obj.letter_text
+		
 	},
-
-	reset(){
-
-
-		objects.typing_word.text='';
-		objects.typing_word_bcg.visible=false;
-		objects.letter_buttons.forEach(l=>{l.checked=0;l.bcg.tint=0xffffff;l.hl.visible=false});
-		game.letters_seq=[];
-
+	
+	area_down(e){
+		
+		const mx = e.data.global.x/app.stage.scale.x
+		const my = e.data.global.y/app.stage.scale.y		
+			
+		const obj=this.get_letter_obj(my,mx,objects.quest_letters[0].width*0.5)
+		if (!obj) return		
+		if (!this.on) return		
+		if (this.drag_started) return
+		if (obj.opened) return
+		
+		sound.play('button0')
+		
+		this.drag_started=1		
+		console.log('drag_started',obj.letter_text)
+		obj.checked=1
+		obj.bcg.tint=0xff99ff
+		this.my_path=[[obj.gy,obj.gx]]
+		this.cur_word=obj.letter_text
 	},
-
-	exit_btn_down(){
-		if (anim2.any_on()||anim3.any_on()) return;
-
-		sound.play('click');
-		this.close();
-		main_menu.activate();
-
+	
+	area_up(e){
+		if (!this.on) return
+		console.log('drag_finished')
+		this.drag_finished()
 	},
 
 	close(){
-
-		this.on=0;
-
-
-		//отключаем файербейс
-		fbs.ref('room3/players').off()
-		fbs.ref('room3/events').off()
-		fbs.ref('room3/players/'+my_data.uid).remove()
-
-		//убираем то что не нужно
-		objects.lamp_cont.visible=false
-		objects.q3_quiz_info.visible=false
-		objects.q3_bonus_cont.visible=false
-		objects.erase_btn.visible=false
-
-		some_process.q3=function(){};
-
-		objects.letter_buttons.forEach(l=>{l.interactive=false});
-
-		objects.crossword_cont.visible=true;
-		objects.letters_area_bcg.visible=true;
-		objects.check_word_btn.visible=false;
-		objects.ready_cont.visible=false;
-		objects.winner_cont.visible=false;
-		anim2.add(objects.players_icons_cont,{y:[0,-200]}, false, 0.4,'linear');
-		anim2.add(objects.game_cont,{alpha:[1,0],x:[0,-440]}, false, 0.4,'linear');
-		clearInterval(this.keep_alive_timer);
-
+		
+		clearInterval(this.top3_updater)
+		objects.quest_cont.visible=false
+		
 	}
-
 }
 
 rules={
@@ -5285,31 +4375,6 @@ main_menu={
 		const [world,level]=game.get_world_and_level(my_data.level_index);
 		objects.sp_btn_info.text=`Мир: ${world+1}, Уровень:${level+1}`;
 
-		//информация об онлайн игроках
-		fbs_once('room1/players').then(uids=>{
-			if (uids)
-				objects.online_q1_info.text=Object.keys(uids).length;
-			else
-				objects.online_q1_info.text='0';
-		})
-
-		//информация об онлайн игроках
-		fbs_once('room2/players').then(uids=>{
-			if (uids)
-				objects.online_q2_info.text=Object.keys(uids).length;
-			else
-				objects.online_q2_info.text='0';
-		})
-		
-		//информация об онлайн игроках
-		fbs_once('room3/players').then(uids=>{
-			if (uids)
-				objects.online_q3_info.text=Object.keys(uids).length;
-			else
-				objects.online_q3_info.text='0';
-		})
-		
-
 		const anim_obj1=objects.anim_objects.find(o=>o.visible===false);
 		anim_obj1.texture=gres.bubbles_net_img.texture;
 		anim_obj1.x=220;
@@ -5329,23 +4394,6 @@ main_menu={
 
 	},
 
-	best_results_down(){
-
-		if (anim2.any_on()) return;
-
-		sound.play('click');
-		this.close();
-		best_results.activate();
-	},
-
-	level_button_down(){
-		if (anim2.any_on()) return;
-
-		sound.play('click');
-		this.close();
-		levels_menu.activate();
-	},
-
 	process(){
 
 		objects.logo.scale_x=Math.sin(Date.now()*0.004)*0.2+1;
@@ -5354,110 +4402,22 @@ main_menu={
 
 	play_btn_down(e) {
 
-		if (anim2.any_on()||anim3.any_on()) return;
+		if (anim2.any_on()||anim3.any_on()) return
 
-		const mx = e.data.global.x/app.stage.scale.x;
-		const my = e.data.global.y/app.stage.scale.y;
-
-		sound.play('click');
-
-		if (mx>246&&mx<316){
-
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=281;
-			anim_obj.y=410;
-			anim_obj.scale_xy=1;
-			anim_obj.angle=0;
-			anim_obj.texture=gres.quad_hl_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0]}, false, 0.5,'flick').then(()=>{
-				this.close();
-				lb.activate('sp_game');
-			});
-
-		}else{
-
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=361;
-			anim_obj.y=410;
-			anim_obj.scale_xy=1;
-			anim_obj.angle=0;
-			anim_obj.texture=gres.quad_hl_img.texture;
-			anim2.add(anim_obj,{alpha:[1,0]}, false, 0.5,'flick').then(()=>{
-				this.close();
-				game.activate();
-			});
-		}
+		sound.play('click')
+		this.close()
+		game.activate()
 
 	},
+	
+	quest_btn_down(){
+		
+		if (anim2.any_on()||anim3.any_on()) return
 
-	play_quiz1_down(e) {
-
-		if (anim2.any_on()) return;
-
-		const mx = e.data.global.x/app.stage.scale.x
-		const my = e.data.global.y/app.stage.scale.y
-
-		sound.play('click');
-
-		if (mx<183){
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=146
-			anim_obj.y=539
-			anim_obj.scale_xy=1
-			anim_obj.angle=0
-			anim_obj.texture=gres.quad_hl_img.texture
-			anim2.add(anim_obj,{alpha:[1,0]}, true, 0.5,'flick').then(()=>{
-				this.close()
-				lb.activate('online_game')
-			});
-		}
-
-		if (mx>183&&mx<257){
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=220
-			anim_obj.y=539
-			anim_obj.scale_xy=1
-			anim_obj.angle=0
-			anim_obj.texture=gres.quad_hl_img.texture
-			anim2.add(anim_obj,{alpha:[1,0]}, true, 0.5,'flick').then(()=>{
-				this.close()
-				quiz1.activate()
-			});
-		}
-
-		if (mx>257&&mx<332){
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false)
-			anim_obj.x=294
-			anim_obj.y=539
-			anim_obj.scale_xy=1
-			anim_obj.angle=0
-			anim_obj.texture=gres.quad_hl_img.texture
-			anim2.add(anim_obj,{alpha:[1,0]}, true, 0.5,'flick').then(()=>{
-				this.close()
-				quiz2.activate()
-			});
-		}
-
-		if (mx>332){
-			const anim_obj=objects.anim_objects.find(o=>o.visible===false);
-			anim_obj.x=368
-			anim_obj.y=539
-			anim_obj.scale_xy=1
-			anim_obj.angle=0
-			anim_obj.texture=gres.quad_hl_img.texture
-			anim2.add(anim_obj,{alpha:[1,0]}, true, 0.5,'flick').then(()=>{
-				this.close()
-				quiz3.activate()
-			});
-		}
-
-	},
-
-	lb_btn_down(){
-
-		this.close();
-		lb.activate();
-
+		sound.play('click')
+		this.close()
+		quest.activate()		
+		
 	},
 
 	rules_button_down(){
@@ -5524,9 +4484,6 @@ main_loader={
 		game_res.add('word_open',git_src+'sounds/word_open.mp3');
 		game_res.add('word_open0',git_src+'sounds/word_open0.mp3');
 		game_res.add('word_opened',git_src+'sounds/word_opened.mp3');
-		game_res.add('nlw',git_src+'sounds/nlw2.mp3');
-		game_res.add('get_ready',git_src+'sounds/get_ready.mp3');
-		game_res.add('winner',git_src+'sounds/winner.mp3');
 		game_res.add('start_level',git_src+'sounds/start_level.mp3');
 
 		game_res.add('button0',git_src+'sounds/button0.mp3');
@@ -5546,7 +4503,9 @@ main_loader={
 		game_res.add('tile_open',git_src+'sounds/tile_open.mp3');
 		game_res.add('click',git_src+'sounds/click.mp3');
 		game_res.add('progress',git_src+'sounds/progress.mp3');
-		game_res.add('q3_data',git_src+'q3_data.txt');
+		game_res.add('decline',git_src+'sounds/decline.mp3');
+		game_res.add('quest_data',git_src+'quest_data.txt');
+		
 		
 		game_res.add("m3_font", git_src+"fonts/core_sans_ds/font.fnt");
 
@@ -5591,136 +4550,6 @@ main_loader={
 
 }
 
-lb={
-
-	last_update:0,
-	online_game_data:0,
-	sp_game_data:0,
-
-	activate(game_type) {
-
-		objects.bcg.texture=gres.lb_bcg.texture;
-		anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.5,'linear');
-		anim2.add(objects.lb_cont,{alpha:[0,1],x:[440, 0]}, true, 0.5,'linear');
-
-		for (let i=0;i<7;i++) {
-
-			objects.lb_cards[i].x=10;
-			objects.lb_cards[i].y=280+i*60;
-			objects.lb_cards[i].place.text=(i+4)+".";
-
-		}
-
-
-		//заголовок
-		objects.lb_title.text={'online_game':'Лидеры\nонлайн игры','sp_game':'Лидеры\nодиночной игры'}[game_type];
-
-		this.update(game_type);
-
-	},
-
-	close() {
-
-
-		anim2.add(objects.lb_cont,{x:[0, -440]}, false, 0.5,'linear');
-
-	},
-
-	exit_btn_down() {
-
-		if (anim2.any_on()) {
-			sound.play('locked');
-			return
-		};
-
-
-		sound.play('click');
-		this.close();
-		main_menu.activate();
-
-	},
-
-	async update(game_type) {
-
-		game.set_loading(1);
-		//берем из кэша
-		let leaders_data={'online_game':this.online_game_data,'sp_game':this.sp_game_data}[game_type];
-
-
-
-		//загружаем из файербейса если надо
-		if (Date.now()-this.last_update>120000 || !leaders_data){
-			const fbs_source={'online_game':'PUB/rating','sp_game':'PRV/level_index'}[game_type];
-			leaders_data=await fbs.ref('players').orderByChild(fbs_source).limitToLast(20).once('value');
-			leaders_data=leaders_data.val();
-			if (game_type==='online_game')
-				this.online_game_data=leaders_data;
-			else
-				this.sp_game_data=leaders_data;
-			this.last_update=Date.now();
-		}
-
-		if(!leaders_data) {
-			game.set_loading(0);
-			return;
-		}
-
-
-		const top={
-			0:{t_name:objects.lb_1_name,t_rating:objects.lb_1_rating,avatar:objects.lb_1_avatar},
-			1:{t_name:objects.lb_2_name,t_rating:objects.lb_2_rating,avatar:objects.lb_2_avatar},
-			2:{t_name:objects.lb_3_name,t_rating:objects.lb_3_rating,avatar:objects.lb_3_avatar},
-		}
-
-		for (let i=0;i<7;i++){
-			top[i+3]={};
-			top[i+3].t_name=objects.lb_cards[i].name;
-			top[i+3].t_rating=objects.lb_cards[i].rating;
-			top[i+3].avatar=objects.lb_cards[i].avatar;
-		}
-
-		//создаем сортированный массив лидеров
-		const leaders_array=[];
-		for(let uid in leaders_data){
-
-			const leader_data=leaders_data[uid];
-			let leader_params;
-			if (game_type==='online_game')
-				leader_params={uid,name:leader_data?.PUB?.name, rating:leader_data?.PUB?.rating, pic_url:leader_data?.PUB?.pic_url};
-			else
-				leader_params={uid,name:leader_data?.PUB?.name, rating:leader_data?.PRV?.level_index, pic_url:leader_data?.PUB?.pic_url};
-
-			leaders_array.push(leader_params);
-
-			//добавляем в кэш
-			await players_cache.update(uid,leader_params);
-		}
-
-
-		game.set_loading(0);
-		//сортируем....
-		leaders_array.sort(function(a,b) {return b.rating - a.rating});
-
-		//заполняем имя и рейтинг
-		for (let place in top){
-			const target=top[place];
-			const leader=leaders_array[place];
-			target.t_name.set2(leader.name||'',place>2?180:130);
-			target.t_rating.text=leader.rating;
-
-		}
-
-		//заполняем аватар
-		for (let place in top){
-			const target=top[place];
-			const leader=leaders_array[place];
-			target.avatar.set_texture(players_cache.players[leader.uid].texture);
-		}
-
-	}
-
-}
-
 vk={
 
 	invite_button_down(){
@@ -5731,7 +4560,7 @@ vk={
 		vkBridge.send('VKWebAppShowInviteBox').then( (data) => {
 			if (data.success && my_data.vk_invite<3) {
 				this.show_bonus_info();
-				fbs.ref('players/'+my_data.uid+'/PRV/vk_invite').transaction(val=> {return (val || 0) + 1});
+				fbs.ref('players/'+my_data.uid+'/vk_invite').transaction(val=> {return (val || 0) + 1});
 				my_data.vk_invite=my_data.vk_invite?my_data.vk_invite+1:1;
 			}
 		})
@@ -5748,7 +4577,7 @@ vk={
 		vkBridge.send('VKWebAppShowWallPostBox', { message: 'Я играю в Буквоед Онлайн и мне нравится!','attachments': 'https://vk.com/app52512790'}).then(data=>{
 			if (data.post_id && my_data.vk_share<3) {
 				this.show_bonus_info();
-				fbs.ref('players/'+my_data.uid+'/PRV/vk_share').transaction(val=> {return (val || 0) + 1});
+				fbs.ref('players/'+my_data.uid+'/vk_share').transaction(val=> {return (val || 0) + 1});
 				my_data.vk_share=my_data.vk_share?my_data.vk_share+1:1;
 			}
 		})
@@ -5859,14 +4688,6 @@ function vis_change() {
 
 	if (document.hidden === true) {
 		PIXI.sound.volumeAll=0;
-		if (quiz1.on){
-			quiz1.close();
-			main_menu.activate();
-		}
-		if (quiz2.on){
-			quiz2.close();
-			main_menu.activate();
-		}
 	} else {
 		PIXI.sound.volumeAll=1;
 	}
@@ -5877,7 +4698,6 @@ async function init_game_env(lang) {
 
 	git_src="https://akukamil.github.io/word_game/"
 	git_src=""
-
 
 	document.body.style.backgroundImage = "url('res/common/bcg.jpg')";
 
@@ -5913,6 +4733,12 @@ async function init_game_env(lang) {
 
 	await main_loader.load1();
 	await main_loader.load2();
+	
+	//данные для квеста и делим слова по длине
+	const words_data=eval(game_res.resources.quest_data.data);
+	for (let w=4;w<=8;w++)
+		quest.words[w]=words_data.filter(word=>{return word.length===w})
+
 
 	//доп функция для текста битмап
 	PIXI.BitmapText.prototype.set2=function(text,w){
@@ -5944,6 +4770,29 @@ async function init_game_env(lang) {
 		this.clear();
 		this.beginTextureFill({texture,matrix});
 		this.drawCircle(radius, radius, radius);
+		this.endFill();
+
+	}
+	
+	PIXI.Graphics.prototype.set_texture_rect=function(texture){
+
+		if(!texture) return;
+		// Get the texture's original dimensions
+		const textureWidth = texture.baseTexture.width;
+		const textureHeight = texture.baseTexture.height;
+
+		// Calculate the scale to fit the texture to the circle's size
+		const scaleX = this.w / textureWidth;
+		const scaleY = this.h / textureHeight;
+
+		// Create a new matrix for the texture
+		const matrix = new PIXI.Matrix();
+
+		// Scale and translate the matrix to fit the circle
+		matrix.scale(scaleX, scaleY);
+		this.clear();
+		this.beginTextureFill({texture,matrix});
+		this.drawRoundedRect(0, 0, this.w, this.w, 8);
 		this.endFill();
 
 	}
@@ -6034,29 +4883,32 @@ async function init_game_env(lang) {
 	const other_data = await fbs_once('players/' + my_data.uid);
 
 	//определяем базовые параметры
-	my_data.level_index = other_data?.PRV?.level_index || 0;
-	my_data.name=other_data?.PUB?.name || my_data.name;
-	game.hints_num=other_data?.PRV?.hints_num || 0;
-	my_data.rating = other_data?.PUB?.rating || 0;
-	my_data.vk_share = other_data?.PRV?.vk_share || 0;
-	my_data.vk_invite = other_data?.PRV?.vk_invite || 0;
+	my_data.level_index = other_data?.level_index || 0
+	my_data.name=other_data?.name || my_data.name
+	game.hints_num=other_data?.hints_num || 0
+	my_data.rating = other_data?.rating || 0
+	my_data.vk_share = other_data?.vk_share || 0
+	my_data.vk_invite = other_data?.vk_invite || 0
+	
 	//записываем данные в файрбейс для актуализации
-	fbs.ref('players/'+my_data.uid+'/PUB/name').set(my_data.name);
-	fbs.ref('players/'+my_data.uid+'/PUB/rating').set(my_data.rating);
-	fbs.ref('players/'+my_data.uid+'/PUB/pic_url').set(my_data.pic_url);
-	fbs.ref('players/'+my_data.uid+'/PRV/level_index').set(my_data.level_index);
-	fbs.ref('players/'+my_data.uid+'/PRV/hints_num').set(game.hints_num);
-	fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
-	fbs.ref('players/'+my_data.uid+'/PRV/source').set(window.location.href.replaceAll('/','_'));
+	fbs.ref('players/'+my_data.uid+'/name').set(my_data.name);
+	fbs.ref('players/'+my_data.uid+'/rating').set(my_data.rating);
+	fbs.ref('players/'+my_data.uid+'/pic_url').set(my_data.pic_url);
+	fbs.ref('players/'+my_data.uid+'/level_index').set(my_data.level_index);
+	fbs.ref('players/'+my_data.uid+'/hints_num').set(game.hints_num);
+	fbs.ref('players/'+my_data.uid+'/tm').set(firebase.database.ServerValue.TIMESTAMP);
 
+	//загрузка сокета
+	await auth2.load_script('https://akukamil.github.io/common/my_ws.js');
+	
 	//отметка о присутствии
 	setInterval(function()	{
-		fbs.ref('players/'+my_data.uid+'/PRV/tm').set(firebase.database.ServerValue.TIMESTAMP);
+		fbs.ref('players/'+my_data.uid+'/tm').set(firebase.database.ServerValue.TIMESTAMP);
 	}, 40000);
 
 	//время первого захода в игру
-	if(!other_data?.PRV?.first_log_tm){
-		fbs.ref('players/'+my_data.uid+'/PRV/first_log_tm').set(firebase.database.ServerValue.TIMESTAMP);
+	if(!other_data?.first_log_tm){
+		fbs.ref('players/'+my_data.uid+'/first_log_tm').set(firebase.database.ServerValue.TIMESTAMP);
 		my_data.first_log=1;
 	}
 
@@ -6071,24 +4923,25 @@ async function init_game_env(lang) {
 	my_data.world=w;
 	my_data.level=l;
 	
-	
-	//данные для 3 задачи
-	quiz3.data=eval(game_res.resources.q3_data.data);
+	my_ws.init();
 
 	//убираем контейнер
 	await new Promise(resolve=> {setTimeout(resolve, 2000);});
 	some_process.loup_anim = function(){};
 	anim2.add(objects.id_cont,{x:[objects.id_cont.x, -440]}, false, 0.25,'easeInBack');
+	
+	//проверяем смену дня
+	quest.check_day_switch()
 
 	//это разные события
 	document.addEventListener('visibilitychange', vis_change);
 
 	//проверяем и включаем музыку
-	music.activate();
+	//music.activate();
 
 	//показыаем основное меню
 	main_menu.activate();
-	//game.run_world(0,10);
+
 
 }
 
