@@ -4321,6 +4321,7 @@ quest={
 	
 	area_up(e){
 		if (!this.on) return
+		if (!this.drag_started) return
 		console.log('drag_finished')
 		this.drag_finished()
 	},
