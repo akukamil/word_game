@@ -4110,11 +4110,12 @@ quest={
 
 		//процент базы данных слов от начала
 		let tar_portion=100
+		if (this.cur_level<50) tar_portion=100		
+		if (this.cur_level<40) tar_portion=80		
+		if (this.cur_level<30) tar_portion=60		
+		if (this.cur_level<20) tar_portion=40		
 		if (this.cur_level<10) tar_portion=20
-		if (this.cur_level<20) tar_portion=40
-		if (this.cur_level<30) tar_portion=60
-		if (this.cur_level<40) tar_portion=80
-		if (this.cur_level<50) tar_portion=100
+
 		
 		for (const path of this.grid_paths){
 			
