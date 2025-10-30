@@ -3965,13 +3965,10 @@ quest={
 		
 		for (let i=0;i<3;i++){
 			
-			const uid=uids[i]		
-			
-			await players_cache.update(uid)		
-			objects.quest_top3_names[i].set2(players_cache.players[uid].name,70)			
-				
+			const uid=uids[i]					
+			await players_cache.update(uid)				
 			await players_cache.update_avatar(uid)		
-			objects.quest_top3_avatars[i].set_texture_rect(players_cache.players[uid].texture)
+
 		}
 		
 		if (this.cur_leaders_tab===1)
