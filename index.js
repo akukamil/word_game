@@ -4197,6 +4197,8 @@ quest={
 		await anim3.add(objects.quest_letters_cont,{x:[0,-M_WIDTH,'linear']}, true, 0.5);
 		this.prepare_grid()
 		
+		ad.show()
+		
 		//увеличиваем уровень и сохраняем его
 		this.cur_level++;
 		objects.quest_level_t.text='Уровень '+this.cur_level		
