@@ -3875,6 +3875,9 @@ quest={
 	on:0,
 	top3_updater:0,
 	top3_cache:{},
+	day_top3:{},
+	_day_top3:{},
+	cur_leaders_tab:0,
 	
 	async activate(){
 		
@@ -3887,6 +3890,8 @@ quest={
 		
 
 		this.on=1
+		this.cur_leaders_tab=0
+		bjects.quest_header_1.texture=gres.quest_header_1.texture
 		
 		let quest_data=safe_ls('word_game_quest')||{}
 		//quest_data=JSON.parse(quest_data)
@@ -3901,7 +3906,16 @@ quest={
 		objects.quest_level_t.text='Уровень '+this.cur_level		
 		objects.quest_progress.text=this.cur_progress		
 		
-		this.update_top3()	
+		await this.update_top3_cache('day_top3')
+		await this.update_top3_cache('_day_top3')
+		
+		//обновляем кэш текущего дня
+		this.top3_updater=setInterval(()=>{
+			console.log('top3_updated')
+			this.update_top3_cache('_day_top3')
+		},30000)
+		this.show_top3('day_top3')		
+				
 
 	},
 	
@@ -3937,9 +3951,9 @@ quest={
 		setTimeout(()=>{this.check_day_switch()},60000)
 	},
 	
-	async update_top3(){
+	async update_top3_cache(top3_path){
 		
-		const top3=await my_ws.get('day_top3')
+		const top3=await my_ws.get(top3_path)
 		if(!top3) return
 		const uids=Object.keys(top3)
 		if (uids.length!==3) return
@@ -3947,14 +3961,43 @@ quest={
 		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
 		const ordered_uids = [sorted_top3[0][0], sorted_top3[1][0], sorted_top3[2][0]]
 		
+		this[top3_path]=top3
+		
 		for (let i=0;i<3;i++){
 			
-			await players_cache.update(ordered_uids[i])		
-			objects.quest_top3_names[i].set2(players_cache.players[ordered_uids[i]].name,70)			
-				
-			await players_cache.update_avatar(ordered_uids[i])		
-			objects.quest_top3_avatars[i].set_texture_rect(players_cache.players[ordered_uids[i]].texture)
+			const uid=uids[i]		
 			
+			await players_cache.update(uid)		
+			objects.quest_top3_names[i].set2(players_cache.players[uid].name,70)			
+				
+			await players_cache.update_avatar(uid)		
+			objects.quest_top3_avatars[i].set_texture_rect(players_cache.players[uid].texture)
+		}
+		
+		if (this.cur_leaders_tab===1)
+			this.show_top3('_day_top3')		
+		
+	},
+	
+	async show_top3(top3_path){
+			
+			
+		for (let i=0;i<3;i++){		
+			objects.quest_top3_names[i].set2('xxx',70)			
+			objects.quest_top3_avatars[i].set_texture_rect(PIXI.Texture.WHITE)
+			objects.quest_top3_progress[i].text='xxx'
+		}
+			
+		const top3=this[top3_path]
+		const uids=Object.keys(top3)
+		if (uids.length!==3) return
+		
+		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
+		const ordered_uids = [sorted_top3[0][0], sorted_top3[1][0], sorted_top3[2][0]]
+		
+		for (let i=0;i<3;i++){		
+			objects.quest_top3_names[i].set2(players_cache.players[ordered_uids[i]].name,70)			
+			objects.quest_top3_avatars[i].set_texture_rect(players_cache.players[ordered_uids[i]].texture)
 			objects.quest_top3_progress[i].text=top3[ordered_uids[i]]
 		}
 	
@@ -4100,8 +4143,10 @@ quest={
 	
 	header_down(){
 	
-		message.add('Пока недоступно(((')
-		
+		//message.add('Пока недоступно(((')
+		this.cur_leaders_tab=1-this.cur_leaders_tab
+		this.show_top3(['day_top3','_day_top3'][this.cur_leaders_tab])		
+		objects.quest_header_1.texture=[gres.quest_header_1.texture,gres.quest_header_2.texture][this.cur_leaders_tab]
 	},
 	
 	save_progress(progress){
