@@ -1255,6 +1255,7 @@ class letter_object_class extends PIXI.Container{
 
 		this.checked=0;
 		this.opened=0;
+		this.hinted=0;
 
 		this.addChild(this.shadow,this.hl,this.bcg,this.bonus,this.letter_sprite);
 	}
@@ -3868,6 +3869,7 @@ quest={
 	cur_words:[],
 	drag_started:0,
 	grid_paths:[],
+	hints_num:0,
 	cur_word:'',
 	cur_progress:0,
 	cur_level:0,
@@ -3898,6 +3900,7 @@ quest={
 		
 		this.cur_progress=quest_data.progress||0
 		this.cur_level=quest_data.level||1		
+		this.hints_num = quest_data.hints_num==null?9:quest_data.hints_num
 		
 		
 		//готовим поле в зависимости от уровня		
@@ -3905,6 +3908,7 @@ quest={
 		
 		objects.quest_level_t.text='Уровень '+this.cur_level		
 		objects.quest_progress.text=this.cur_progress		
+		objects.quest_hint_t.text=this.hints_num		
 		
 		await this.update_top3_cache('day_top3')
 		await this.update_top3_cache('_day_top3')
@@ -3926,6 +3930,57 @@ quest={
 		
 	},
 	
+	hint_down(){
+		
+		
+		if (this.hints_num<=0){
+			message.add('Нету подсказок(((')
+			sound.play('decline')
+			return
+		}
+		
+		
+		const paths_len=this.grid_paths.length
+		let tar_letter=0
+		for (let i=0;i<paths_len;i++){			
+			const tar_path=this.grid_paths[i]
+			const p0y=tar_path[0][0]
+			const p0x=tar_path[0][1]
+			const cur_letter=objects.quest_letters[p0y*this.grid_size+p0x]
+			if (!cur_letter.hinted&&!cur_letter.opened) {
+				tar_letter=cur_letter
+				break
+			}			
+		}
+		
+		if (!tar_letter){
+			message.add('Не могу дать подсказку(((')
+			sound.play('decline')
+			return
+		}
+
+		tar_letter.hinted=1
+		tar_letter.bcg.tint=0xff0000
+		
+		//анимация
+		const free_spr=objects.anim_objects.find(o=>!o.visible);
+		if (free_spr){
+			free_spr.texture=gres.white_orb_img.texture;
+			free_spr.x=tar_letter.x;
+			free_spr.y=tar_letter.y;
+			anim2.add(free_spr,{alpha:[1,0],angle:[0,200],scale_xy:[0.5,1.2]}, false, 1.5,'linear');
+		}
+		
+		sound.play('star_added')
+		
+		//уменьшаем подсказки и сохраняем
+		this.hints_num--
+		objects.quest_hint_t.text=this.hints_num
+		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level,hints_num:this.hints_num})
+		
+		
+	},
+	
 	async check_day_switch(){
 		
 		
@@ -3942,7 +3997,7 @@ quest={
 			//день поменялся начинаем заново
 			this.cur_progress=0
 			this.cur_level=0
-			safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level})
+			safe_ls('word_game_quest',{progress:0,level:0,hints_num:this.hints_num})
 			
 		}	
 
@@ -4022,6 +4077,7 @@ quest={
 				objects.quest_letters[i].opened=0
 				objects.quest_letters[i].checked=0
 				objects.quest_letters[i].visible=true
+				objects.quest_letters[i].hinted=0
 				i++
 			}
 		}
@@ -4148,7 +4204,7 @@ quest={
 	
 	save_progress(progress){
 		
-		safe_ls('word_game_quest',{progress,level:this.cur_level})
+		safe_ls('word_game_quest',{progress,level:this.cur_level,hints_num:this.hints_num})
 		my_ws.safe_send({cmd:'top3',path:'_day_top3',val:{uid:my_data.uid,val:progress}})
 	},
 		
@@ -4230,8 +4286,14 @@ quest={
 		
 		//восстанавливаем текущую линию
 		this.my_path.forEach(point=>{
-			objects.quest_letters[point[0]*this.grid_size+point[1]].bcg.tint=0xffffff
-			objects.quest_letters[point[0]*this.grid_size+point[1]].checked=0
+			const letter_obj=objects.quest_letters[point[0]*this.grid_size+point[1]]
+			//подказку не убираем
+			if (!letter_obj.hinted)
+				letter_obj.bcg.tint=0xffffff
+			else
+				letter_obj.bcg.tint=0xff0000
+			
+			letter_obj.checked=0
 		})
 
 	},
