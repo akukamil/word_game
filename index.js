@@ -4110,7 +4110,7 @@ quest={
 				
 		//показываем вспышку
 		const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
-		anim_obj3.texture=gres.stars3_img.texture;
+		anim_obj3.texture=gres.stars_net_img.texture;
 		anim_obj3.x=220;
 		anim_obj3.y=375;
 		anim_obj3.angle=0;
