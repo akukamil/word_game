@@ -4014,7 +4014,7 @@ quest={
 		if (uids.length!==3) return
 		
 		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
-		const ordered_uids = [sorted_top3[1][0], sorted_top3[0][0], sorted_top3[2][0]]
+		const ordered_uids = [sorted_top3[0][0], sorted_top3[1][0], sorted_top3[2][0]]
 		
 		for (let i=0;i<3;i++){
 			
