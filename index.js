@@ -1309,77 +1309,6 @@ class letter_object_class extends PIXI.Container{
 
 }
 
-class word_object_class extends PIXI.Container{
-
-	constructor(){
-
-		super();
-
-		this.word_text='';
-		this.opened=0;
-		this.word_length=0;
-		this.bonus_type='';
-		this.bonus_letter_object=0;
-
-		//это буквы
-		this.letters_objects=[];
-		for(let i=0;i<6;i++){
-
-			const letter_object=new letter_object_class();
-			letter_object.y=25;
-			letter_object.x=25+i*38;
-			letter_object.bcg.texture=gres.fly_button_bcg.texture;
-			letter_object.width=50;
-			letter_object.height=50;
-			//letter.tint=0x63472B;
-			letter_object.shadow.visible=false;
-			letter_object.hl.visible=false;
-			letter_object.visible=true;
-
-			this.letters_objects.push(letter_object);
-		}
-
-		this.addChild(...this.letters_objects);
-	}
-
-	open_word(){
-
-		this.letters_objects.forEach(l=>l.open());
-	}
-
-	add_coin_bonus(bonus){
-
-		this.bonus_type=bonus;
-		this.bonus_letter_object=this.letters_objects[this.word_length-1];
-		this.bonus_letter_object.add_coin_bonus(bonus);
-
-	}
-
-	prepare(word_text){
-
-		this.opened=0;
-		this.visible=true;
-		this.bonus_type='';
-		this.bonus_letter_object=0;
-
-		//запоминаем в форму слово и делаем пустую форму
-		this.word_text=word_text;
-		this.word_length=word_text.length;
-
-		//сначала скрываем все буквы
-		this.letters_objects.forEach(l=>l.visible=false)
-
-		for (let l=0;l<this.word_length;l++){
-			this.letters_objects[l].set_as_holder();
-			this.letters_objects[l].set_letter(this.word_text[l]);
-			this.letters_objects[l].visible=true;
-		}
-
-
-	}
-
-}
-
 class anim_object_class extends PIXI.Container{
 
 	constructor(){
@@ -3942,6 +3871,7 @@ quest={
 	cur_word:'',
 	cur_progress:0,
 	cur_level:0,
+	grid_size:5,
 	on:0,
 	top3_updater:0,
 	top3_cache:{},
@@ -3955,7 +3885,7 @@ quest={
 		anim3.add(objects.quest_header_cont,{y:[-300,objects.quest_header_cont.sy,'linear']}, true, 0.5);
 		objects.bcg.texture=gres.quest_bcg.texture
 		
-		this.prepare_grid()
+
 		this.on=1
 		
 		let quest_data=safe_ls('word_game_quest')||{}
@@ -3964,13 +3894,15 @@ quest={
 		this.cur_progress=quest_data.progress||0
 		this.cur_level=quest_data.level||1		
 		
+		
+		//готовим поле в зависимости от уровня
+		const grid_size=this.cur_level>10?6:5
+		this.prepare_grid(grid_size)		
+		
 		objects.quest_level_t.text='Уровень '+this.cur_level		
 		objects.quest_progress.text=this.cur_progress		
 		
 		this.update_top3()	
-		this.top3_updater=setInterval(()=>{
-			this.update_top3()			
-		},50000)
 
 	},
 	
@@ -4029,20 +3961,22 @@ quest={
 	
 	},
 	
-	prepare_grid(){
+	prepare_grid(grid_size){
 		
+		this.grid_size=grid_size
 		this.cur_words=[]
 		
-		const left_margin=70
-		const grid_size=6
+		const left_margin=60
 		const x_step=(M_WIDTH-left_margin*2)/(grid_size-1)
 		
+		objects.quest_letters.forEach(l=>l.visible=false)
+		
 		let i=0
-		for (let y=0;y<6;y++){
-			for (let x=0;x<6;x++){
+		for (let y=0;y<grid_size;y++){
+			for (let x=0;x<grid_size;x++){
 				
 				objects.quest_letters[i].x=x*x_step+left_margin
-				objects.quest_letters[i].y=y*x_step+240
+				objects.quest_letters[i].y=y*x_step+250
 				objects.quest_letters[i].width=x_step*1.3
 				objects.quest_letters[i].height=x_step*1.3
 				objects.quest_letters[i].bcg.tint=0xffffff
@@ -4053,22 +3987,33 @@ quest={
 			}
 		}
 		
-		this.grid_paths=grid.make(6,6)
+		this.grid_paths=grid.make(grid_size,grid_size)
+		
+
+		//процент базы данных слов от начала
+		let tar_portion=100
+		if (this.cur_level<10) tar_portion=20
+		if (this.cur_level<20) tar_portion=40
+		if (this.cur_level<30) tar_portion=60
+		if (this.cur_level<40) tar_portion=80
+		if (this.cur_level<50) tar_portion=100
+
 		
 		for (const path of this.grid_paths){
 			
 			const path_len=path.length
-			const words_db=this.words[path_len]
-			const word_to_place=words_db[irnd(0,words_db.length-1)]			
+			const words_db=this.words[path_len]			
+			const last_word_in_db=Math.floor(words_db.length*tar_portion*0.01)			
+			const word_to_place=words_db[irnd(0,last_word_in_db-1)]			
 			this.cur_words.push(word_to_place)
 			for (let i=0;i<path_len;i++){
 				
 				const y=path[i][0]
 				const x=path[i][1]
 				const letter=word_to_place[i]
-				objects.quest_letters[y*6+x].gy=y
-				objects.quest_letters[y*6+x].gx=x
-				objects.quest_letters[y*6+x].set_letter(letter)
+				objects.quest_letters[y*grid_size+x].gy=y
+				objects.quest_letters[y*grid_size+x].gx=x
+				objects.quest_letters[y*grid_size+x].set_letter(letter)
 			}
 		}
 		
@@ -4114,17 +4059,16 @@ quest={
 	
 	check_finished(){
 		
-		for (let y=0;y<6;y++)
-			for (let x=0;x<6;x++)
-				if (!objects.quest_letters[y*6+x].opened)
+		for (let y=0;y<this.grid_size;y++)
+			for (let x=0;x<this.grid_size;x++)
+				if (!objects.quest_letters[y*this.grid_size+x].opened)
 					return 0
 		return 1
 		
 	},
 	
 	async switch_to_next(){		
-		
-		
+				
 		//показываем вспышку
 		const anim_obj3=objects.anim_objects.find(o=>o.visible===false);
 		anim_obj3.texture=gres.stars3_img.texture;
@@ -4133,8 +4077,7 @@ quest={
 		anim_obj3.angle=0;
 		anim_obj3.scale_xy=1;
 		anim3.add(anim_obj3,{alpha:[0,1,'ease2back'],scale_xy:[0.666,1,'easeOutBack'],angle:[0,40,'linear']}, false, 3);
-		
-		
+				
 		sound.play('win')
 		await anim3.add(objects.quest_letters_cont,{x:[0,-M_WIDTH,'linear']}, true, 0.5);
 		this.prepare_grid()
@@ -4142,7 +4085,7 @@ quest={
 		//увеличиваем уровень и сохраняем его
 		this.cur_level++;
 		objects.quest_level_t.text='Уровень '+this.cur_level		
-		this.save_progress()
+		this.save_progress(this.cur_progress)
 		
 		await anim3.add(objects.quest_letters_cont,{x:[M_WIDTH,0,'linear']}, true, 0.5);
 		this.on=1
@@ -4162,10 +4105,10 @@ quest={
 		
 	},
 	
-	save_progress(){
+	save_progress(progress){
 		
-		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level})
-		my_ws.safe_send({cmd:'top3',path:'_day_top3',val:{uid:my_data.uid,val:this.cur_progress}})
+		safe_ls('word_game_quest',{progress,level:this.cur_level})
+		my_ws.safe_send({cmd:'top3',path:'_day_top3',val:{uid:my_data.uid,val:progress}})
 	},
 		
 	process_opened_word(word_path){
@@ -4174,8 +4117,8 @@ quest={
 		
 		//меняем цвет
 		word_path.forEach(point=>{
-			objects.quest_letters[point[0]*6+point[1]].opened=1
-			objects.quest_letters[point[0]*6+point[1]].bcg.tint=0xaabb99
+			objects.quest_letters[point[0]*this.grid_size+point[1]].opened=1
+			objects.quest_letters[point[0]*this.grid_size+point[1]].bcg.tint=0xaabb99
 		})
 			
 			
@@ -4184,7 +4127,7 @@ quest={
 			
 			const cy=word_path[i][0]
 			const cx=word_path[i][1]
-			const letter_obj=objects.quest_letters[cy*6+cx]
+			const letter_obj=objects.quest_letters[cy*this.grid_size+cx]
 			const flash=objects.flashes.find(f=>f.visible===false)
 			flash.x=letter_obj.x
 			flash.y=letter_obj.y
@@ -4193,19 +4136,23 @@ quest={
 		}		
 		
 		let i=0
-		const tx=objects.quest_progress_cont.x
-		const ty=objects.quest_progress_cont.y	
+		const tx=366
+		const ty=174	
+		
+		//сразу сохраняем и передаем в топ3
+		this.save_progress(this.cur_progress+word_path.length)
+		
 		
 		const stars_timer=setInterval(()=>{
 			
 			const cy=word_path[i][0]
 			const cx=word_path[i][1]
-			const letter_obj=objects.quest_letters[cy*6+cx]
+			const letter_obj=objects.quest_letters[cy*this.grid_size+cx]
 			const star=objects.anim_objects.find(f=>f.visible===false)
 			const sx=letter_obj.x
 			const sy=letter_obj.y
 			star.texture=gres.star_img.texture
-			anim3.add(star,{x:[sx, tx,'easeOutBack'],y:[sy,ty,'linear'],scale_xy:[1.5,0.4,'linear'],alpha:[1,0.3,'linear']}, false, 0.5).then(()=>{
+			anim3.add(star,{x:[sx, tx,'easeOutBack'],y:[sy,ty,'linear'],scale_xy:[2,0.4,'linear'],alpha:[1,0.3,'linear']}, false, 0.5).then(()=>{
 				this.add_progress(1)
 				sound.play('word_open0')
 			})
@@ -4242,8 +4189,8 @@ quest={
 		
 		//восстанавливаем текущую линию
 		this.my_path.forEach(point=>{
-			objects.quest_letters[point[0]*6+point[1]].bcg.tint=0xffffff
-			objects.quest_letters[point[0]*6+point[1]].checked=0
+			objects.quest_letters[point[0]*this.grid_size+point[1]].bcg.tint=0xffffff
+			objects.quest_letters[point[0]*this.grid_size+point[1]].checked=0
 		})
 
 	},
