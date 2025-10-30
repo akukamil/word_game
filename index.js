@@ -3895,9 +3895,8 @@ quest={
 		this.cur_level=quest_data.level||1		
 		
 		
-		//готовим поле в зависимости от уровня
-		const grid_size=this.cur_level>10?6:5
-		this.prepare_grid(grid_size)		
+		//готовим поле в зависимости от уровня		
+		this.prepare_grid()		
 		
 		objects.quest_level_t.text='Уровень '+this.cur_level		
 		objects.quest_progress.text=this.cur_progress		
@@ -3961,19 +3960,19 @@ quest={
 	
 	},
 	
-	prepare_grid(grid_size){
+	prepare_grid(){
 		
-		this.grid_size=grid_size
+		this.grid_size=this.cur_level>10?6:5
 		this.cur_words=[]
 		
 		const left_margin=60
-		const x_step=(M_WIDTH-left_margin*2)/(grid_size-1)
+		const x_step=(M_WIDTH-left_margin*2)/(this.grid_size-1)
 		
 		objects.quest_letters.forEach(l=>l.visible=false)
 		
 		let i=0
-		for (let y=0;y<grid_size;y++){
-			for (let x=0;x<grid_size;x++){
+		for (let y=0;y<this.grid_size;y++){
+			for (let x=0;x<this.grid_size;x++){
 				
 				objects.quest_letters[i].x=x*x_step+left_margin
 				objects.quest_letters[i].y=y*x_step+250
@@ -3987,7 +3986,7 @@ quest={
 			}
 		}
 		
-		this.grid_paths=grid.make(grid_size,grid_size)
+		this.grid_paths=grid.make(this.grid_size,this.grid_size)
 		
 
 		//процент базы данных слов от начала
@@ -4011,9 +4010,9 @@ quest={
 				const y=path[i][0]
 				const x=path[i][1]
 				const letter=word_to_place[i]
-				objects.quest_letters[y*grid_size+x].gy=y
-				objects.quest_letters[y*grid_size+x].gx=x
-				objects.quest_letters[y*grid_size+x].set_letter(letter)
+				objects.quest_letters[y*this.grid_size+x].gy=y
+				objects.quest_letters[y*this.grid_size+x].gx=x
+				objects.quest_letters[y*this.grid_size+x].set_letter(letter)
 			}
 		}
 		
