@@ -3891,7 +3891,7 @@ quest={
 
 		this.on=1
 		this.cur_leaders_tab=0
-		bjects.quest_header_1.texture=gres.quest_header_1.texture
+		objects.quest_header_1.texture=gres.quest_header_1.texture
 		
 		let quest_data=safe_ls('word_game_quest')||{}
 		//quest_data=JSON.parse(quest_data)
