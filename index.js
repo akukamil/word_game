@@ -3880,6 +3880,7 @@ quest={
 	day_top3:{},
 	_day_top3:{},
 	cur_leaders_tab:0,
+	wrong_words:{},
 	
 	async activate(){
 		
@@ -3932,6 +3933,9 @@ quest={
 	
 	hint_down(){
 		
+		if (anim2.any_on()||anim3.any_on()) return
+		
+		anim3.add(objects.quest_hint_cont,{scale_xy:[1,0.8,'ease2back']}, true, 0.2);
 		
 		if (this.hints_num<=0){
 			message.add('Нету подсказок(((')
@@ -3978,6 +3982,25 @@ quest={
 		objects.quest_hint_t.text=this.hints_num
 		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level,hints_num:this.hints_num})
 		
+		
+	},
+	
+	add_hint(num){
+		
+		this.hints_num+=num
+		objects.quest_hint_t.text=this.hints_num
+		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level,hints_num:this.hints_num})
+			
+		anim3.add(objects.quest_hint_cont,{scale_xy:[1,1.2,'ease2back'],angle:[0,10,'ease2back']}, true, 0.35);
+		
+		//анимация
+		const free_spr=objects.anim_objects.find(o=>!o.visible);
+		if (free_spr){
+			free_spr.texture=gres.white_orb_img.texture;
+			free_spr.x=241;
+			free_spr.y=709;
+			anim2.add(free_spr,{alpha:[1,0],angle:[0,200],scale_xy:[0.5,1.2]}, false, 1.5,'linear');
+		}
 		
 	},
 	
@@ -4059,6 +4082,7 @@ quest={
 		
 		this.grid_size=this.cur_level>10?6:5
 		this.cur_words=[]
+		this.wrong_words={}
 		
 		const left_margin=60
 		const x_step=(M_WIDTH-left_margin*2)/(this.grid_size-1)
@@ -4082,8 +4106,7 @@ quest={
 			}
 		}
 		
-		this.grid_paths=grid.make(this.grid_size,this.grid_size)
-		
+		this.grid_paths=grid.make(this.grid_size,this.grid_size)		
 
 		//процент базы данных слов от начала
 		let tar_portion=100
@@ -4092,7 +4115,6 @@ quest={
 		if (this.cur_level<30) tar_portion=60
 		if (this.cur_level<40) tar_portion=80
 		if (this.cur_level<50) tar_portion=100
-
 		
 		for (const path of this.grid_paths){
 			
@@ -4110,9 +4132,7 @@ quest={
 				objects.quest_letters[y*this.grid_size+x].gx=x
 				objects.quest_letters[y*this.grid_size+x].set_letter(letter)
 			}
-		}
-		
-		
+		}	
 		
 	},
 	
@@ -4270,31 +4290,68 @@ quest={
 				
 	},
 	
-	drag_finished(){
+	reset_path(path){
 		
-		this.drag_started=0
-		if (this.check_path(this.my_path)){
-			
-			this.process_opened_word(this.my_path)
-			return
-		}else{			
-			if (this.cur_words.includes(this.cur_word))
-				message.add('Попробуйте найти это слово по другому)))')
-		}
-		
-		//sound.play('decline')
-		
-		//восстанавливаем текущую линию
-		this.my_path.forEach(point=>{
+		//восстанавливаем цвет текущей линии
+		path.forEach(point=>{
 			const letter_obj=objects.quest_letters[point[0]*this.grid_size+point[1]]
 			//подказку не убираем
 			if (!letter_obj.hinted)
 				letter_obj.bcg.tint=0xffffff
 			else
-				letter_obj.bcg.tint=0xff0000
-			
+				letter_obj.bcg.tint=0xff0000			
 			letter_obj.checked=0
 		})
+		
+	},
+		
+	drag_finished(){
+				
+		this.drag_is_on=0
+		
+		
+		//правильный путь
+		if (this.check_path(this.my_path)){			
+			this.process_opened_word(this.my_path)
+			return
+		}		
+		
+		//слово есть но по другому расположено
+		if (this.cur_words.includes(this.cur_word)){
+			message.add('Попробуйте найти это слово по другому)))')
+			sound.play('decline')
+			this.reset_path(this.my_path)
+			return
+		}		
+		
+		//если слово есть в словаре
+		if (all_words[this.cur_word]!=null){
+			
+			if (!this.wrong_words[this.cur_word]){
+				
+				if (this.cur_word.length>3){
+					message.add('Знаю такое слово, но здесь его нет. Получите бонус)))')
+					sound.play('nlw');
+					this.add_hint(1)						
+				}else{
+					message.add('Знаю такое слово, но здесь его нет(((')
+					sound.play('decline')
+				}	
+				
+				this.wrong_words[this.cur_word]=1
+				
+			}else{
+				message.add('Уже пробовали, такого слова нет(((')
+				sound.play('decline')
+			}
+			
+			
+			this.reset_path(this.my_path)
+			return	
+		}
+		
+		this.reset_path(this.my_path)
+
 
 	},
 	
@@ -4332,7 +4389,7 @@ quest={
 	area_move(e){
 		
 		if (!this.on) return
-		if (!this.drag_started) return
+		if (!this.drag_is_on) return
 		const mx = e.data.global.x/app.stage.scale.x
 		const my = e.data.global.y/app.stage.scale.y		
 		
@@ -4356,13 +4413,13 @@ quest={
 		const obj=this.get_letter_obj(my,mx,objects.quest_letters[0].width*0.5)
 		if (!obj) return		
 		if (!this.on) return		
-		if (this.drag_started) return
+		if (this.drag_is_on) return
 		if (obj.opened) return
 		
 		sound.play('button0')
 		
-		this.drag_started=1		
-		console.log('drag_started',obj.letter_text)
+		this.drag_is_on=1		
+		console.log('drag_is_on',obj.letter_text)
 		obj.checked=1
 		obj.bcg.tint=0xaa77aa
 		this.my_path=[[obj.gy,obj.gx]]
@@ -4371,7 +4428,7 @@ quest={
 	
 	area_up(e){
 		if (!this.on) return
-		if (!this.drag_started) return
+		if (!this.drag_is_on) return
 		console.log('drag_finished')
 		this.drag_finished()
 	},
@@ -4548,6 +4605,7 @@ main_loader={
 		game_res.add('locked',git_src+'sounds/locked.mp3');
 		game_res.add('bubble',git_src+'sounds/bubble.mp3');
 		game_res.add('world_complete',git_src+'sounds/world_complete.mp3');
+		game_res.add('nlw',git_src+'sounds/nlw.mp3');
 		game_res.add('music',git_src+'sounds/music.mp3');
 		game_res.add('star',git_src+'sounds/star.mp3');
 		game_res.add('star_added',git_src+'sounds/star_added.mp3');
