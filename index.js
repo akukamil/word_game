@@ -3875,6 +3875,7 @@ quest={
 	cur_progress:0,
 	cur_level:0,
 	grid_size:5,
+	letter_init_scale:0,
 	on:0,
 	top3_updater:0,
 	top3_cache:{},
@@ -4150,6 +4151,9 @@ quest={
 			}
 		}
 		
+		//начальный масштаб для анимаций
+		this.letter_init_scale=objects.quest_letters[0].scale_xy
+		
 		this.grid_paths=grid.make(this.grid_size,this.grid_size)		
 
 		//процент базы данных слов от начала
@@ -4281,10 +4285,9 @@ quest={
 		//меняем цвет
 		word_path.forEach(point=>{
 			objects.quest_letters[point[0]*this.grid_size+point[1]].opened=1
-			objects.quest_letters[point[0]*this.grid_size+point[1]].bcg.tint=0xaabb99
+			objects.quest_letters[point[0]*this.grid_size+point[1]].bcg.tint=0xaaaa99
 		})
-			
-			
+						
 		//дополнительная анимация доски - звездочки вокруг каждой буквы
 		for (let i=0;i<word_path.length;i++){
 			
@@ -4296,6 +4299,8 @@ quest={
 			flash.y=letter_obj.y
 			flash.angle=irnd(0,360);
 			anim2.add(flash,{scale_xy:[0.2, 0.5],alpha:[0.9,0]}, false, 2,'linear',false);
+		
+			anim3.add(letter_obj,{angle:[0,360,'linear']}, true, 0.25)
 		}		
 		
 		let i=0
@@ -4304,8 +4309,7 @@ quest={
 		
 		//сразу сохраняем и передаем в топ3
 		this.save_progress(this.cur_progress+word_path.length)
-		
-		
+				
 		const stars_timer=setInterval(()=>{
 			
 			const cy=word_path[i][0]
@@ -4325,8 +4329,7 @@ quest={
 				clearInterval(stars_timer)				
 
 		},150)
-		
-		
+				
 		if (this.check_finished()){
 			this.on=0
 			setTimeout(()=>{
@@ -4341,6 +4344,7 @@ quest={
 		//восстанавливаем цвет текущей линии
 		path.forEach(point=>{
 			const letter_obj=objects.quest_letters[point[0]*this.grid_size+point[1]]
+			anim3.add(letter_obj,{scale_xy:[this.letter_init_scale,this.letter_init_scale*1.1,'ease2back']}, true, 0.15)
 			//подказку не убираем
 			if (!letter_obj.hinted)
 				letter_obj.bcg.tint=0xffffff
@@ -4432,6 +4436,17 @@ quest={
 		
 	},
 
+	check_letter(obj){
+		
+		sound.play('button0')
+		obj.checked=1
+		obj.bcg.tint=0xaa77aa
+		this.my_path.push([obj.gy,obj.gx])
+		this.cur_word+=obj.letter_text
+		anim3.add(obj,{scale_xy:[this.letter_init_scale,this.letter_init_scale*1.1,'ease2back']}, true, 0.15)
+		
+	},
+
 	area_move(e){
 		
 		if (!this.on) return
@@ -4442,12 +4457,9 @@ quest={
 		const obj=this.get_letter_obj(my,mx,objects.quest_letters[0].width*0.5)
 		if (!obj) return
 		if (obj.checked) return
-		sound.play('button0')
-		console.log('letter_checked_on_move',obj.letter_text)
-		obj.checked=1
-		obj.bcg.tint=0xaa77aa
-		this.my_path.push([obj.gy,obj.gx])
-		this.cur_word+=obj.letter_text
+		
+		this.check_letter(obj)
+
 		
 	},
 	
@@ -4462,14 +4474,10 @@ quest={
 		if (this.drag_is_on) return
 		if (obj.opened) return
 		
-		sound.play('button0')
-		
-		this.drag_is_on=1		
-		console.log('drag_is_on',obj.letter_text)
-		obj.checked=1
-		obj.bcg.tint=0xaa77aa
-		this.my_path=[[obj.gy,obj.gx]]
-		this.cur_word=obj.letter_text
+		this.drag_is_on=1
+		this.my_path=[]
+		this.cur_word=''
+		this.check_letter(obj)
 	},
 	
 	area_up(e){
