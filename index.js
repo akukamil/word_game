@@ -1,5 +1,5 @@
 var M_WIDTH=440, M_HEIGHT=740;
-var app ={stage:{},renderer:{}}, game_res, objects={},game_name='word_game', game_tick=0, LANG = 0, git_src;
+var app ={stage:{},renderer:{}}, game_res,gres={},objects={},game_name='word_game', game_tick=0, LANG = 0, git_src;
 var some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
 
@@ -1231,7 +1231,7 @@ class letter_object_class extends PIXI.Container{
 		this.hl.anchor.set(0.5,0.5);
 		this.hl.visible=false;
 		
-		this.bcg=new PIXI.Sprite(gres.big_letter_bcg.texture);
+		this.bcg=new PIXI.Sprite(gres.letters_bcg[0].texture);
 		this.bcg.anchor.set(0.5,0.5);
 		//this.bcg.interactive=true
 		//this.bcg.buttonMode=true
@@ -1240,6 +1240,7 @@ class letter_object_class extends PIXI.Container{
 		//this.bcg.pointerover=function(){quest.letter_over(t)}
 		//this.bcg.pointerup=function(){quest.letter_up(t)}
 		//this.bcg.pointerupoutside=function(){quest.letter_up(t)}
+
 
 		this.bonus=new PIXI.Sprite();
 		this.bonus.anchor.set(0.5,0.5);
@@ -2920,7 +2921,7 @@ game={
 			anim2.add(objects.bcg,{alpha:[0,1]}, true, 0.25,'linear')
 		});
 
-		objects.letter_buttons.forEach(l=>{l.bcg.texture=gres.big_letter_bcg.texture;l.visible=false});
+		objects.letter_buttons.forEach(l=>{l.bcg.texture=gres.letters_bcg[0];l.visible=false});
 
 		game.run_world(my_data.world,my_data.level);
 
@@ -3881,8 +3882,25 @@ quest={
 	_day_top3:{},
 	cur_leaders_tab:0,
 	wrong_words:{},
+	level_to_letter_style:0,
 	
 	async activate(){
+		
+		//карта стилей
+		if(!this.level_to_letter_style){
+			this.level_to_letter_style=[
+				{ level:[-1,5], texture: gres.letters_bcg[0],tint:0xffffff,alpha:1},
+				{ level:[6,10], texture: gres.letters_bcg[1],tint:0x000000,alpha:0.85},
+				{ level:[11,15], texture: gres.letters_bcg[2],tint:0xffffff,alpha:0.8},
+				{ level:[16,20], texture: gres.letters_bcg[3],tint:0x2C451B,alpha:0.95},
+				{ level:[21,25], texture: gres.letters_bcg[4],tint:0x283F19,alpha:0.9},
+				{ level:[26,30], texture: gres.letters_bcg[5],tint:0xFFF2CC,alpha:0.81},
+				{ level:[31,35], texture: gres.letters_bcg[6],tint:0xFFE699,alpha:0.9},
+				{ level:[36,40], texture: gres.letters_bcg[7],tint:0xFFE699,alpha:0.8},
+				{ level:[41,45], texture: gres.letters_bcg[8],tint:0xF4B183,alpha:0.9},
+				{ level:[41,9999], texture: gres.letters_bcg[9],tint:0xFFF2CC,alpha:0.9}
+			]
+		}
 		
 		
 		objects.quest_header_cont.visible=false
@@ -4078,6 +4096,22 @@ quest={
 	
 	},
 	
+	redraw(style_id){
+		
+		letter_style=this.level_to_letter_style[style_id]
+		
+		let i=0
+		for (let y=0;y<this.grid_size;y++){
+			for (let x=0;x<this.grid_size;x++){
+				objects.quest_letters[i].letter_sprite.alpha=letter_style.alpha
+				objects.quest_letters[i].bcg.texture=letter_style.texture
+				objects.quest_letters[i].set_letter(objects.quest_letters[i].letter_text)
+				i++
+			}
+		}
+		
+	},
+	
 	prepare_grid(){
 		
 		this.grid_size=this.cur_level>10?6:5
@@ -4089,6 +4123,14 @@ quest={
 		
 		objects.quest_letters.forEach(l=>l.visible=false)
 		
+		//
+
+		
+		//определяем стиль в зависимости от уровня
+		let letter_style = this.level_to_letter_style.find(level_data => this.cur_level >= level_data.level[0] && this.cur_level <= level_data.level[1]);
+		//letter_style=this.level_to_letter_style[4]
+		
+		
 		let i=0
 		for (let y=0;y<this.grid_size;y++){
 			for (let x=0;x<this.grid_size;x++){
@@ -4097,7 +4139,9 @@ quest={
 				objects.quest_letters[i].y=y*x_step+250
 				objects.quest_letters[i].width=x_step*1.3
 				objects.quest_letters[i].height=x_step*1.3
+				objects.quest_letters[i].letter_sprite.alpha=letter_style.alpha
 				objects.quest_letters[i].bcg.tint=0xffffff
+				objects.quest_letters[i].bcg.texture=letter_style.texture
 				objects.quest_letters[i].opened=0
 				objects.quest_letters[i].checked=0
 				objects.quest_letters[i].visible=true
@@ -4133,8 +4177,7 @@ quest={
 				objects.quest_letters[y*this.grid_size+x].gx=x
 				objects.quest_letters[y*this.grid_size+x].set_letter(letter)
 			}
-		}	
-		
+		}			
 	},
 	
 	comp_2_paths(path1,path2){
@@ -4638,23 +4681,37 @@ main_loader={
 
 		//формируем текстуры букв
 		gres.letters_textures = {А:0,Б:0,В:0,Г:0,Д:0,Е:0,Ж:0,З:0,И:0,Й:0,К:0,Л:0,М:0,Н:0,О:0,П:0,Р:0,С:0,Т:0,У:0,Ф:0,Х:0,Ц:0,Ч:0,Ш:0,Щ:0,Ы:0,Ь:0,Э:0,Ю:0,Я:0};
-
-	   // Define the frame width and height based on the 3x4 grid
 		const keys=Object.keys(gres.letters_textures);
-		const frameWidth = 135;
-		const frameHeight = 135;
+		let frameWidth = 135
+		let frameHeight = 135
 		let ind=0;
 		for (let row = 0; row < 5; row++) {
 			for (let col = 0; col < (row===4?3:7); col++) {
+				
 				const x = col * 135;
 				const y = row * 135;
-
-				const frame = new PIXI.Rectangle(x, y, frameWidth, frameHeight);
-				const smallTexture = new PIXI.Texture(gres.letters.texture, frame);
-				gres.letters_textures[keys[ind]]=smallTexture;
+				const frame = new PIXI.Rectangle(x, y, frameWidth, frameHeight)				
+				const smallTexture = new PIXI.Texture(gres.letters.texture, frame)				
+				gres.letters_textures[keys[ind]]=smallTexture
+				
+				
 				ind++;
 			}
 		}
+		
+		//тексуры фона для букв
+		ind=0
+		gres.letters_bcg=[]
+		for (let row = 0; row < 5; row++) {
+			for (let col = 0; col<2; col++) {				
+				const x = col * 120
+				const y = row * 120
+				const frame = new PIXI.Rectangle(x, y, 120, 120)				
+				const t = new PIXI.Texture(gres.big_letters_images.texture, frame)				
+				gres.letters_bcg[ind]=t				
+				ind++;
+			}
+		}	
 
 		anim2.add(objects.loader_cont,{alpha:[1,0]}, false, 1,'linear');
 
