@@ -4873,8 +4873,8 @@ function vis_change() {
 
 async function init_game_env(lang) {
 
-	git_src="https://akukamil.github.io/word_game/"
-	git_src=""
+	//git_src="https://akukamil.github.io/word_game/"
+	git_src="https://word-game.s3-website.cloud.ru/"
 
 	document.body.style.backgroundImage = "url('res/common/bcg.jpg')";
 
