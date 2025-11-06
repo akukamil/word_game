@@ -23,4 +23,5 @@ jobs:
     - name: Sync files to Storage
       run: |
         aws --endpoint-url=https://s3.cloud.ru/ s3 sync ./ s3://word-game-bucket/ \
-
+            --exclude ".git/*" \
+            --exclude ".gitignore"

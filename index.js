@@ -4837,10 +4837,8 @@ async function define_platform_and_language(env) {
 		return;
 	}
 
-	game_platform = 'UNKNOWN';
-	LANG = 0;
-
-
+	game_platform = 'UNKNOWN'
+	LANG = 0
 
 }
 
