@@ -4892,7 +4892,7 @@ async function init_game_env(lang) {
 	await define_platform_and_language();
 
 	//подгружаем библиотеку аватаров
-	await auth2.load_script('https://akukamil.github.io/common/multiavatar.min.js');
+	await auth2.load_script('https://akukamil.github.io/common/multiavatar.min.txt');
 
 	document.body.innerHTML='<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items:center;justify-content: center;background-color: rgba(41,41,41,1)}</style>';
 
