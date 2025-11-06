@@ -24,7 +24,8 @@ jobs:
       run: |
         aws --endpoint-url=https://s3.cloud.ru/ s3 sync ./ s3://word-game-bucket/ \
             --exclude ".git/*" \
-            --exclude ".server/*" \
+            --exclude "server/*" \
+            --exclude "server/**" \
             --exclude ".github/*" \
             --exclude "README.md" \
             --exclude "LICENSE" \
