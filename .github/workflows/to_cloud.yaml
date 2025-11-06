@@ -22,7 +22,7 @@ jobs:
 
     - name: Sync files to Yandex Storage (with exclude)
       run: |
-        aws --endpoint-url=https://s3.cloud.ru/word-game-bucket s3 sync ./ s3://balda/ \
+        aws --endpoint-url=https://s3.cloud.ru/word-game-bucket s3 sync ./ s3://word-game/ \
             --delete \
             --acl public-read \
             --exclude ".git/*" \
