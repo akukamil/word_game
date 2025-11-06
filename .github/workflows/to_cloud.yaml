@@ -13,25 +13,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Configure AWS CLI for VC cloud
+    - name: Configure AWS CLI
       run: |
         aws configure set aws_access_key_id ${{ secrets.SERVICE_ACCOUNT_KEY_ID }}
         aws configure set aws_secret_access_key ${{ secrets.SERVICE_ACCOUNT_SECRET }}
         aws configure set default.region ru-central-1
         aws configure set output json
 
-    - name: Sync files to Yandex Storage (with exclude)
+    - name: Sync files to Storage
       run: |
         aws --endpoint-url=https://s3.cloud.ru/ s3 sync ./ s3://word-game-bucket/ \
-            --exclude ".git/*" \
-            --exclude "server/*" \
-            --exclude "server/**" \
-            --exclude ".github/*" \
-            --exclude "README.md" \
-            --exclude "LICENSE" \
-            --exclude ".gitignore" \
-            --exclude "node_modules/*" \
-            --exclude "*.log" \
-            --exclude "*.tmp" \
-            --exclude ".DS_Store" \
-            --exclude "Thumbs.db"
+
