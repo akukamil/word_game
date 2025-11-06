@@ -4803,7 +4803,7 @@ async function define_platform_and_language(env) {
 		return;
 	}
 
-	if (s.includes('vk.com')||s.includes('vkontakte')) {
+	if (s.includes('vk.com')||s.includes('vk_app_id')) {
 		game_platform = 'VK';
 		LANG = 0;
 		return;
