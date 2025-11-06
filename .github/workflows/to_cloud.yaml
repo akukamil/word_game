@@ -1,5 +1,5 @@
          
-name: Deploy to Yandex Cloud Storage
+name: Deploy to Cloud
 
 on:
   push:
@@ -15,8 +15,8 @@ jobs:
 
     - name: Configure AWS CLI for VC cloud
       run: |
-        aws configure set aws_access_key_id ${{ secrets.VC_SERVICE_ACCOUNT_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.VC_SERVICE_ACCOUNT_SECRET }}
+        aws configure set aws_access_key_id ${{ secrets.SERVICE_ACCOUNT_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.SERVICE_ACCOUNT_SECRET }}
         aws configure set default.region ru-central-1
         aws configure set output json
 
