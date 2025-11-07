@@ -2313,11 +2313,11 @@ auth2 = {
 
 ad = {
 
-	prv_show : -9999,
+	prv_show : Date.now(),
 
-	show() {
+	async show() {
 
-		if ((Date.now() - this.prv_show) < 100000 )
+		if ((Date.now() - this.prv_show) < 200000 )
 			return;
 		this.prv_show = Date.now();
 
@@ -2333,9 +2333,7 @@ ad = {
 
 		if (game_platform==='VK') {
 
-			vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
-			.then(function(data){})
-			.catch(function(error){})
+			await vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
 		}
 
 		if (game_platform==='CRAZYGAMES') {
@@ -4122,7 +4120,7 @@ quest={
 		this.cur_words=[]
 		this.wrong_words={}
 		
-		const left_margin=60
+		const left_margin=this.cur_level>10?45:60
 		const x_step=(M_WIDTH-left_margin*2)/(this.grid_size-1)
 		
 		objects.quest_letters.forEach(l=>l.visible=false)
@@ -4248,7 +4246,9 @@ quest={
 		await anim3.add(objects.quest_letters_cont,{x:[0,-M_WIDTH,'linear']}, true, 0.5);
 		this.prepare_grid()
 		
-		ad.show()
+		await new Promise(resolve=> {setTimeout(resolve, 1500);});
+		await ad.show()
+		await new Promise(resolve=> {setTimeout(resolve, 1500);});
 		
 		//увеличиваем уровень и сохраняем его
 		this.cur_level++;
@@ -4410,6 +4410,7 @@ quest={
 	
 	exit_btn_down(){
 		if (anim2.any_on()||anim3.any_on()) return
+		sound.play('click')
 		this.close()
 		main_menu.activate()
 		
@@ -4876,6 +4877,7 @@ async function init_game_env(lang) {
 
 	//git_src="https://akukamil.github.io/word_game/"
 	git_src="https://word-game.s3-website.cloud.ru/"
+	//git_src=''
 
 	document.body.style.backgroundImage = "url('res/common/bcg.jpg')";
 
