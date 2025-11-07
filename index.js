@@ -2333,7 +2333,14 @@ ad = {
 
 		if (game_platform==='VK') {
 
-			await vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
+
+			try {
+				await vkBridge.send("VKWebAppShowNativeAds", {ad_format:"interstitial"})
+			} catch (e) {
+				console.log("VKWebAppShowNativeAds error");
+			}
+
+			
 		}
 
 		if (game_platform==='CRAZYGAMES') {
