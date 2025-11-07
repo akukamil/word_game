@@ -2362,7 +2362,7 @@ ad = {
 	async show_vk_banner(){
 
 		const cur_tm=Date.now();
-		if(cur_tm-this.prv_banner_show<200000) return;
+		if(cur_tm-this.prv_banner_show<250000) return;
 		this.prv_banner_show=cur_tm;
 		const data=await vkBridge.send('VKWebAppShowBannerAd', {banner_location: 'bottom',layout_type:'resize'});
 		//if(data.result&&my_turn) this.hide_vk_banner();
@@ -4114,6 +4114,9 @@ quest={
 	},
 	
 	prepare_grid(){
+		
+		if (game_platform==='VK')
+			ad.show_vk_banner();
 		
 		this.grid_size=this.cur_level>10?6:5
 		this.cur_words=[]
