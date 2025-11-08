@@ -4015,7 +4015,7 @@ quest={
 		objects.quest_hint_t.text=this.hints_num
 		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level,hints_num:this.hints_num})
 			
-		anim3.add(objects.quest_hint_cont,{scale_xy:[1,1.2,'ease2back'],angle:[0,10,'ease2back']}, true, 0.35);
+		anim3.add(objects.quest_hint_cont,{scale_xy:[1,1.2,'ease2back'],angle:[0,10,'ease2back']}, true, 0.35,false);
 		
 		//анимация
 		const free_spr=objects.anim_objects.find(o=>!o.visible);
@@ -4389,7 +4389,9 @@ quest={
 			
 			if (!this.wrong_words[this.cur_word]){
 				
-				if (this.cur_word.length>3){
+				const give_hint=this.cur_level>15?this.cur_word.length>4:this.cur_word.length>3
+				
+				if (give_hint){
 					message.add('Знаю такое слово, но здесь его нет. Получите бонус)))')
 					sound.play('nlw');
 					this.add_hint(1)						
@@ -4403,8 +4405,7 @@ quest={
 			}else{
 				message.add('Уже пробовали, такого слова нет(((')
 				sound.play('decline')
-			}
-			
+			}			
 			
 			this.reset_path(this.my_path)
 			return	
