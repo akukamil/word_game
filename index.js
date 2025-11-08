@@ -4015,7 +4015,7 @@ quest={
 		objects.quest_hint_t.text=this.hints_num
 		safe_ls('word_game_quest',{progress:this.cur_progress,level:this.cur_level,hints_num:this.hints_num})
 			
-		anim3.add(objects.quest_hint_cont,{scale_xy:[1,1.2,'ease2back'],angle:[0,10,'ease2back']}, true, 0.35,false);
+		anim3.add(objects.quest_hint_cont,{scale_xy:[1,1.2,'ease2back'],angle:[0,10,'ease2back']}, true, 0.35);
 		
 		//анимация
 		const free_spr=objects.anim_objects.find(o=>!o.visible);
@@ -4023,7 +4023,7 @@ quest={
 			free_spr.texture=gres.white_orb_img.texture;
 			free_spr.x=241;
 			free_spr.y=709;
-			anim2.add(free_spr,{alpha:[1,0],angle:[0,200],scale_xy:[0.5,1.2]}, false, 1.5,'linear');
+			anim2.add(free_spr,{alpha:[1,0],angle:[0,200],scale_xy:[0.5,1.2]}, false, 1.5,'linear',false);
 		}
 		
 	},
