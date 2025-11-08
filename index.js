@@ -2369,7 +2369,7 @@ ad = {
 		const cur_tm=Date.now();
 		if(cur_tm-this.prv_banner_show<250000) return;
 		this.prv_banner_show=cur_tm;
-		const data=await vkBridge.send('VKWebAppShowBannerAd', {banner_location: 'bottom',layout_type:'resize'});
+		const data=await vkBridge.send('VKWebAppShowBannerAd', {banner_location: 'top',layout_type:'resize'});
 		//if(data.result&&my_turn) this.hide_vk_banner();
 	},
 
