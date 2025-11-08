@@ -2903,6 +2903,14 @@ game={
 
 		this.on=1;
 		hints.activate(this);
+		
+		//загадочная вещь
+		objects.letter_connect_graph.clear();
+		objects.letter_connect_graph.lineStyle(6, 0xffffff);
+		objects.letter_connect_graph.drawCircle(100,100,100);
+		objects.letter_connect_graph.render(app.renderer);
+		objects.letter_connect_graph.clear();
+		
 
 		//преобразовываем индекс в номер мира и уровень
 		[w,l]=game.get_world_and_level(my_data.level_index);
@@ -2918,7 +2926,9 @@ game={
 		objects.letters_area_bcg.pointermove=game.area_move.bind(game);
 		objects.letters_area_bcg.pointerup=game.area_up.bind(game);
 		objects.letters_area_bcg.pointerdown=game.area_down.bind(game);
-
+		
+		
+		
 
 		//меняем дизайн
 		anim2.add(objects.bcg,{alpha:[1,0]}, false, 0.25,'linear').then(()=>{
