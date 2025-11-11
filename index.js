@@ -4772,7 +4772,7 @@ main_loader={
 		game_res.add('progress',git_src+'sounds/progress.mp3');
 		game_res.add('decline',git_src+'sounds/decline.mp3');
 		game_res.add('quest_data',git_src+'quest_data.txt');
-		game_res.add('top3',git_src+'top3.mp3');
+		game_res.add('top3',git_src+'sounds/top3.mp3');
 		game_res.add('multiavatar', TW_PATH+'/multiavatar.min.txt');
 		
 		game_res.add("m3_font", git_src+"fonts/core_sans_ds/font.fnt");
