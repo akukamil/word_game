@@ -4008,6 +4008,7 @@ quest={
 	async next_down(){
 		
 		if (anim2.any_on()||anim3.any_on()) return
+		sound.play('click')
 		if (objects.quest_tut_cont.visible)
 			anim3.add(objects.quest_tut_cont,{x:[0,-450,'linear']}, false, 0.5)		
 		this.process_to_first_level()
