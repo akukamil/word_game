@@ -2,6 +2,7 @@ var M_WIDTH=440, M_HEIGHT=740;
 var app ={stage:{},renderer:{}}, game_res,gres={},objects={},game_name='word_game', game_tick=0, LANG = 0, git_src;
 var some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
+const TW_PATH='https://f2771470-common.website.twcstorage.ru'
 
 fbs_once=async function(path){
 	const info=await fbs.ref(path).once('value');
@@ -2024,7 +2025,7 @@ anim3={
 	}
 }
 
-auth2 = {
+auth2={
 
 	load_script(src) {
 	  return new Promise((resolve, reject) => {
@@ -2311,7 +2312,7 @@ auth2 = {
 	}
 }
 
-ad = {
+ad={
 
 	prv_show : Date.now(),
 
@@ -3899,6 +3900,7 @@ quest={
 	cur_leaders_tab:0,
 	wrong_words:{},
 	level_to_letter_style:0,
+	tut_shown:0,
 	
 	async activate(){
 		
@@ -3916,16 +3918,111 @@ quest={
 				{ level:[41,45], texture: gres.letters_bcg[8],tint:0xF4B183,alpha:0.9},
 				{ level:[41,9999], texture: gres.letters_bcg[9],tint:0xFFF2CC,alpha:0.9}
 			]
-		}
+		}		
+
+		objects.bcg.texture=gres.quest_bcg.texture
 		
+		//запускаем туториал если надо	
+		if(!this.tut_shown)
+			this.process_tut()	
+		else
+			this.process_to_first_level()
+
+	},
+		
+	async process_tut(){
+		
+		anim3.add(objects.quest_tut_cont,{x:[450,0,'linear']}, true, 0.5);
+		const h=objects.quest_tut_hand
+		h.x=357
+		h.x=406
+		
+		this.tut_shown=1
+		
+		while(1){
+			
+			await anim3.add(h,{x:[h.x,161,'linear'],y:[h.y,269,'linear']}, true, 1,false)
+			await new Promise(resolve=> {setTimeout(resolve, 500)})
+			h.texture=gres.hand_icon_img.texture		
+			await new Promise(resolve=> {setTimeout(resolve, 500)})
+			await anim3.add(h,{x:[h.x,245,'linear']}, true, 1,false)
+			await anim3.add(h,{y:[h.y,352,'linear']}, true, 1,false)
+			await anim3.add(h,{x:[h.x,285,'linear']}, true, 0.5,false)
+			await new Promise(resolve=> {setTimeout(resolve, 500)})
+			h.texture=gres.hand_icon.texture
+			if (!objects.quest_tut_cont.visible) return
+			
+		}		
+		
+	},
+	
+	async show_yestrday_leader(){
+		
+		await this.update_top3_cache('day_top3')
+		
+		sound.play('top3')
+		anim3.add(objects.quest_top_cont,{alpha:[0,1,'linear'],scale_xy:[1,1.2,'ease2back']}, true, 0.5);
+		
+		const top3=this['day_top3']
+		const uids=Object.keys(top3)
+		if (uids.length!==3) return
+		
+		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
+		const ordered_uids = [sorted_top3[0][0], sorted_top3[1][0], sorted_top3[2][0]]
+		
+		//показываем топа
+		objects.quest_top_name.set2(players_cache.players[ordered_uids[0]].name,190)			
+		objects.quest_top_avatar.set_texture(players_cache.players[ordered_uids[0]].texture)
+		objects.quest_top_stars.text=top3[ordered_uids[0]]
+				
+		this.show_leader_splash()
+		const timer=setInterval(()=>{			
+			this.show_leader_splash()
+			if (!objects.quest_top_cont.visible)
+				clearInterval(timer)
+			
+		},500)		
+
+	},
+	
+	leader_dlg_down(){
+		
+		if (anim2.any_on()||anim3.any_on()) return		
+		anim3.add(objects.quest_top_cont,{alpha:[1,0,'linear']}, false, 0.2)
+		
+	},
+	
+	show_leader_splash(){		
+		
+		const anim_obj=objects.quest_top_anims.find(o=>o.visible===false)
+		if(!anim_obj) return
+		anim_obj.texture=gres.stars_net_img.texture
+		anim_obj.x=220
+		anim_obj.y=380
+		anim_obj.angle=irnd(0,360)
+		anim2.add(anim_obj,{scale_xy:[0.3,1.2],alpha:[0.5,0]},false,2,'linear',false)
+		
+	},	
+	
+	async next_down(){
+		
+		if (anim2.any_on()||anim3.any_on()) return
+		if (objects.quest_tut_cont.visible)
+			anim3.add(objects.quest_tut_cont,{x:[0,-450,'linear']}, false, 0.5)		
+		this.process_to_first_level()
+		
+	},
+	
+	async process_to_first_level(){
+		
+		//готовим поле в зависимости от уровня		
+		this.prepare_grid()			
 		
 		objects.quest_header_cont.visible=false
 		await anim3.add(objects.quest_cont,{x:[M_WIDTH,0,'linear']}, true, 0.5);
-		anim3.add(objects.quest_tutorial_bcg,{alpha:[0,1,'linear']}, true, 0.5);
-		anim3.add(objects.quest_header_cont,{y:[-300,objects.quest_header_cont.sy,'linear']}, true, 0.5);
-		objects.bcg.texture=gres.quest_bcg.texture
 		
-
+		anim3.add(objects.quest_header_cont,{y:[-300,objects.quest_header_cont.sy,'linear']}, true, 0.5);
+				
 		this.on=1
 		this.cur_leaders_tab=0
 		objects.quest_header_1.texture=gres.quest_header_1.texture
@@ -3936,11 +4033,7 @@ quest={
 		this.cur_progress=quest_data.progress||0
 		this.cur_level=quest_data.level||1		
 		this.hints_num = quest_data.hints_num==null?9:quest_data.hints_num
-		
-		
-		//готовим поле в зависимости от уровня		
-		this.prepare_grid()		
-		
+							
 		objects.quest_level_t.text='Уровень '+this.cur_level		
 		objects.quest_progress.text=this.cur_progress		
 		objects.quest_hint_t.text=this.hints_num		
@@ -3954,16 +4047,9 @@ quest={
 			this.update_top3_cache('_day_top3')
 		},30000)
 		this.show_top3('day_top3')		
-				
+		
+	},
 
-	},
-	
-	next_down(){
-		
-		if (anim2.any_on()||anim3.any_on()) return
-		anim3.add(objects.quest_tutorial_bcg,{alpha:[1,0,'linear']}, false, 0.25);
-		
-	},
 	
 	hint_down(){
 		
@@ -4069,10 +4155,7 @@ quest={
 		if(!top3) return
 		const uids=Object.keys(top3)
 		if (uids.length!==3) return
-		
-		const sorted_top3 = Object.entries(top3).sort((a, b) => b[1] - a[1])
-		const ordered_uids = [sorted_top3[0][0], sorted_top3[1][0], sorted_top3[2][0]]
-		
+				
 		this[top3_path]=top3
 		
 		for (let i=0;i<3;i++){
@@ -4143,7 +4226,6 @@ quest={
 		objects.quest_letters.forEach(l=>l.visible=false)
 		
 		//
-
 		
 		//определяем стиль в зависимости от уровня
 		let letter_style = this.level_to_letter_style.find(level_data => this.cur_level >= level_data.level[0] && this.cur_level <= level_data.level[1]);
@@ -4690,7 +4772,8 @@ main_loader={
 		game_res.add('progress',git_src+'sounds/progress.mp3');
 		game_res.add('decline',git_src+'sounds/decline.mp3');
 		game_res.add('quest_data',git_src+'quest_data.txt');
-		
+		game_res.add('top3',git_src+'top3.mp3');
+		game_res.add('multiavatar', TW_PATH+'/multiavatar.min.txt');
 		
 		game_res.add("m3_font", git_src+"fonts/core_sans_ds/font.fnt");
 
@@ -4707,6 +4790,11 @@ main_loader={
 		}
 
 		await new Promise((resolve, reject)=> game_res.load(resolve))
+
+		//добавялем библиотеку аватаров
+		const script = document.createElement('script')
+		script.textContent = gres.multiavatar.data
+		document.head.appendChild(script)
 
 
 		//формируем текстуры букв
@@ -4893,29 +4981,24 @@ function vis_change() {
 
 async function init_game_env(lang) {
 
+
+	await define_platform_and_language();
+
+	//убираем надпись
+	document.getElementById('loadingText').remove();
+	
+	
 	//git_src="https://akukamil.github.io/word_game/"
 	git_src="https://word-game.s3-website.cloud.ru/"
-	//git_src=''
+	git_src=''
 
 	document.body.style.backgroundImage = "url('res/common/bcg.jpg')";
 
-	document.body.style.webkitTouchCallout = "none";
-	document.body.style.webkitUserSelect = "none";
-	document.body.style.khtmlUserSelect = "none";
-	document.body.style.mozUserSelect = "none";
-	document.body.style.msUserSelect = "none";
-	document.body.style.userSelect = "none";
 
 	//ресурсы и короткое обращение
 	game_res=new PIXI.Loader();
 	gres=game_res.resources;
 
-	await define_platform_and_language();
-
-	//подгружаем библиотеку аватаров
-	await auth2.load_script('https://akukamil.github.io/common/multiavatar.min.txt');
-
-	document.body.innerHTML='<style>html,body {margin: 0;padding: 0;height: 100%;}body {display: flex;align-items:center;justify-content: center;background-color: rgba(41,41,41,1)}</style>';
 
 	//создаем приложение пикси и добавляем тень
 	app.stage = new PIXI.Container();
@@ -5095,9 +5178,6 @@ async function init_game_env(lang) {
 	fbs.ref('players/'+my_data.uid+'/level_index').set(my_data.level_index);
 	fbs.ref('players/'+my_data.uid+'/hints_num').set(game.hints_num);
 	fbs.ref('players/'+my_data.uid+'/tm').set(firebase.database.ServerValue.TIMESTAMP);
-
-	//загрузка сокета
-	await auth2.load_script('https://akukamil.github.io/common/my_ws.js');
 	
 	//отметка о присутствии
 	setInterval(function()	{
@@ -5138,7 +5218,8 @@ async function init_game_env(lang) {
 	//music.activate();
 
 	//показыаем основное меню
-	main_menu.activate();
+	quest.show_yestrday_leader()
+	main_menu.activate()
 
 
 }
