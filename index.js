@@ -3988,6 +3988,7 @@ quest={
 	leader_dlg_down(){
 		
 		if (anim2.any_on()||anim3.any_on()) return		
+		sound.play('click')
 		anim3.add(objects.quest_top_cont,{alpha:[1,0,'linear']}, false, 0.2)
 		
 	},
