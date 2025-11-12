@@ -2,7 +2,7 @@ var M_WIDTH=440, M_HEIGHT=740;
 var app ={stage:{},renderer:{}}, game_res,gres={},objects={},game_name='word_game', game_tick=0, LANG = 0, git_src;
 var some_process = {}, game_platform='';
 var my_data={opp_id : ''},opp_data={};
-const TW_PATH='https://f2771470-common.website.twcstorage.ru'
+const COM_URL='https://mtcom.website.yandexcloud.net'
 
 fbs_once=async function(path){
 	const info=await fbs.ref(path).once('value');
@@ -4775,7 +4775,6 @@ main_loader={
 		game_res.add('decline',git_src+'sounds/decline.mp3');
 		game_res.add('quest_data',git_src+'quest_data.txt');
 		game_res.add('top3',git_src+'sounds/top3.mp3');
-		game_res.add('multiavatar', TW_PATH+'/multiavatar.min.txt');
 		
 		game_res.add("m3_font", git_src+"fonts/core_sans_ds/font.fnt");
 
@@ -4792,11 +4791,6 @@ main_loader={
 		}
 
 		await new Promise((resolve, reject)=> game_res.load(resolve))
-
-		//добавялем библиотеку аватаров
-		const script = document.createElement('script')
-		script.textContent = gres.multiavatar.data
-		document.head.appendChild(script)
 
 
 		//формируем текстуры букв
