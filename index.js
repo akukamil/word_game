@@ -4898,7 +4898,7 @@ async function define_platform_and_language(env) {
 		return;
 	}
 
-	if (s.includes('yandex')||s.includes('app-id=196005')) {
+	if (s.includes('app-id=196005')) {
 
 		game_platform = 'YANDEX';
 
